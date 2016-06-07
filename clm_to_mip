@@ -1,0 +1,1021 @@
+#!/bin/bash
+#
+# Convert CLM and CAM fields to MIP-like fields
+#
+#######################################################################################################################################################
+# 
+# CLM fields
+#
+#CMIP5 name   standard_name                                                      units       #  CLM fields needed    Derivation
+#-----------  -----------------------------------------------------------------  ----------- -  -------------------  ----------------------------------
+#burntArea    area_fraction                                                      %           1  ANN_FAREA_BURNED     ANN_FAREA_BURNED*(100/12), or
+#                                                                                               FAREA_BURNED         FAREA_BURNED scaled by month
+#cCwd         wood_debris_carbon_content                                         kg m-2      1  CWDC                 CWDC/1000
+#cLeaf        leaf_carbon_content                                                kg m-2      1  LEAFC                LEAFC/1000
+#cLitter      litter_carbon_content                                              kg m-2      1  TOTLITC              TOTLITC/1000
+#cMisc        miscellaneous_living_matter_carbon_content                         kg m-2      1  STORVEGC             STORVEGC/1000
+#cProduct     carbon_content_of_products_of_anthropogenic_land_use_change        kg m-2      1  TOTPRODC             TOTPRODC/1000
+#cRoot        root_carbon_content                                                kg m-2      3  FROOTC               FROOTC+LIVE_ROOTC+DEAD_ROOTC
+#                                                                                               LIVE_ROOTC           /1000
+#                                                                                               DEAD_ROOTC
+#cSoilFast    fast_soil_pool_carbon_content                                      kg m-2      1  SOIL1C               SOIL1C/1000
+#cSoilMedium  medium_soil_pool_carbon_content                                    kg m-2      1  SOIL2C               SOIL2C/1000
+#cSoilSlow    slow_soil_pool_carbon_content                                      kg m-2      1  SOIL3C               SOIL3C/1000
+#cSoil        soil_carbon_content                                                kg m-2      1  TOTSOMC              TOTSOMC/1000
+#cVeg         vegetation_carbon_content                                          kg m-2      1  TOTVEGC              TOTVEGC/1000
+#cWood        wood_carbon_content                                                kg m-2      1  WOODC                WOODC/1000
+#evspsblsoi   water_evaporation_flux_from_soil                                   kg m-2 s-1  1  QSOIL                QSOIL no change
+#evspsblveg   water_evaporation_flux_from_canopy                                 kg m-2 s-1  1  QVEGE                QVEGE no change
+#fFire        surface_upward_mass_flux_of_carbon_dioxide_expressed_as_           kg m-2 s-1  1  COL_FIRE_CLOSS       COL_FIRE_CLOSS/1000
+#             carbon_due_to_emission_from_fires_excluding_anthropogenic_
+#             land_use_change
+#fLitterSoil  carbon_mass_flux_into_soil_from_litter                             kg m-2 s-1  3  LITR1C_TO_SOIL1C     LITR1C_TO_SOIL1C+LITR2C_TO_SOIL2C
+#                                                                                               LITR2C_TO_SOIL2C     +LITR3C_TO_SOIL3C
+#                                                                                               LITR3C_TO_SOIL3C     /1000
+#fLuc         surface_net_upward_mass_flux_of_carbon_dioxide_expressed_as_       kg m-2 s-1  1  LAND_USE_FLUX        LAND_USE_FLUX/1000
+#             carbon_due_to_emission_from_anthropogenic_land_use_change
+#fVegLitter   litter_carbon_flux                                                 kg m-2 s-1  1  LITFALL              LITFALL/1000
+#gpp          gross_primary_productivity_of_carbon                               kg m-2 s-1  1  GPP                  GPP/1000
+#hfdsn        surface_downward_heat_flux_in_snow                                 W m-2       1  FGR                  FGR reverse sign
+#lai          leaf_area_index                                                    1           1  TLAI                 TLAI no change
+#lwsnl        liquid_water_content_of_snow_layer                                 kg m-2      1  SNOWLIQ              SNOWLIQ no change
+#mrfso        soil_frozen_water_content                                          kg m-2      1  SOILICE              SOILICE summed over all layers,
+#                                                                                                                    capped over icy regions at 5000
+#mrlsl        moisture_content_of_soil_layer                                     kg m-2      2  SOILLIQ              SOILLIQ+SOILICE summed,
+#                                                                                               SOILICE              at each soil depth
+#mrro         runoff_flux                                                        kg m-2 s-1  1  QRUNOFF              QRUNOFF no change
+#mrros        surface_runoff_flux                                                kg m-2 s-1  1  QOVER                QOVER no change
+#mrsos        moisture_content_of_soil_layer                                     kg m-2      1  SOILWATER_10CM       SOILWATER_10CM no change
+#mrso         soil_moisture_content                                              kg m-2      2  SOILICE              SOILICE+SOILLIQ, summed over Z,
+#                                                                                               SOILLIQ              capped over icy regions at 5000
+#nbp          surface_net_downward_mass_flux_of_carbon_dioxide_expressed_as_
+#             carbon_due_to_all_land_processes                                   kg m-2 s-1  1  NBP                  NBP/1000
+#nppLeaf      net_primary_productivity_of_carbon_accumulated_in_leaves           kg m-2 s-1  1  LEAFC_ALLOC          LEAFC_ALLOC/1000
+#npp          net_primary_productivity_of_carbon                                 kg m-2 s-1  1  NPP                  NPP/1000
+#nppRoot      net_primary_productivity_of_carbon_accumulated_in_roots            kg m-2 s-1  1  FROOTC_ALLOC         FROOTC_ALLOC/1000
+#nppWood      net_primary_productivity_of_carbon_accumulated_in_wood             kg m-2 s-1  1  WOODC_ALLOC          WOODC_ALLOC/1000
+#prveg        precipitation_flux_onto_canopy                                     kg m-2 s-1  1  QINTR                QINTR no change
+#ra           plant_respiration_carbon_flux                                      kg m-2 s-1  1  AR                   AR/1000
+#rGrowth      surface_upward_carbon_mass_flux_due_to_plant_respiration_for_      kg m-2 s-1  1  GR                   GR/1000
+#             biomass_growth
+#rh           heterotrophic_respiration_carbon_flux                              kg m-2 s-1  1  HR                   HR/1000
+#rMaint       surface_upward_carbon_mass_flux_due_to_plant_respiration_for_      kg m-2 s-1  1  MR                   MR/1000
+#             biomass_maintenance
+#snc          surface_snow_area_fraction                                         %           1  FSNO                 FSNO*100
+#snd          surface_snow_thickness                                             m           1  SNOWDP               SNOWDP no change
+#snm          surface_snow_melt_flux                                             kg m-2 s-1  1  QMELT                QMELT no change 
+#snw          surface_snow_amount                                                kg m-2      1  H2OSNO               H2OSNO no change 
+#sootsn       soot_content_of_surface_snow                                       kg m-2      3  SNOBCMSL             SNOBCMSL+SNODSTMSL+SNOOCMSL
+#                                                                                               SNODSTMSL 
+#                                                                                               SNOOCMSL
+#tran         transpiration_flux                                                 kg m-2 s-1  1  QVEGT                QVEGT no change
+#tsl          soil_temperature                                                   K           1  TSOI                 TSOI no change
+#sfcWind      wind_speed                                                         m s-1       1  WIND                 WIND no change
+#
+#######################################################################################################################################################
+#
+# Available CMIP5 "Amon" fields from CLM equivalents
+#
+#evspsbl      water_evaporation_flux                                             kg m-2 s-1  3  QSOIL                QSOIL+QVEGE+QVEGT
+#                                                                                               QVEGE
+#                                                                                               QVEGE
+#hfls         surface_upward_latent_heat_flux                                    W m-2       1  EFLX_LH_TOT          EFLX_LH_TOT no change or
+#                                                                                            3  FCTR                 FCTR + FCEV + FGEV
+#                                                                                               FCEV
+#                                                                                               FGEV
+#hfss         surface_upward_sensible_heat_flux                                  W m-2       1  FSH                  FSH no change
+#hurs         relative_humidity                                                  %           1  RH2M                 RH2M no change
+#huss         specific_humidity                                                  1           1  Q2M                  Q2M no change
+#pr           precipitation_flux                                                 kg m-2 s-1  1  RAIN+SNOW            RAIN+SNOW (same numerical value)
+#prsn         snowfall_flux                                                      kg m-2 s-1  1  SNOW                 SNOW (same numerical value)
+#ps           surface_air_pressure                                               Pa          1  PBOT                 PBOT no change
+#rlds         surface_downwelling_longwave_flux_in_air                           W m-2       1  FLDS                 FLDS no change
+#rlus         surface_upwelling_longwave_flux_in_air                             W m-2       1  FIRE                 FIRE no change
+#rsds         surface_downwelling_shortwave_flux_in_air                          W m-2       1  FSDS                 FSDS no change
+#rsus         surface_upwelling_shortwave_flux_in_air                            W m-2       1  FSR                  FSR no change
+#tas          air_temperature                                                    K           1  TSA                  TSA no change
+#
+#######################################################################################################################################################
+#
+if [ $# -ne 3 ] ; then
+   echo "Usage: clm_to_mip model experiment_name year_month_range"
+   echo "Will convert/calculate as many MIP-like files as possible in the current directory"
+   exit 1
+else
+   MODEL=$1
+   EXPERIMENT=$2
+   TIMESAMP=$3
+fi
+
+
+#
+# Set up ncap2 on yellowstone
+#
+PROCHOST=`hostname`;export PROCHOST
+#
+# resolve machine/site dependencies
+#
+case "$PROCHOST" in 
+  * )
+    NCAP2=`which ncap2`
+    NCKS=`which ncks`
+    ;;
+  yellow* ) 
+    NCKS=/glade/apps/opt/nco/4.3.4/gnu/4.7.2/bin/ncks
+    NCAP2=/glade/apps/opt/nco/4.2.3/gnu/4.7.2/bin/ncap2
+    ;;
+esac
+#
+if [ ! -d ./CMOR ] ; then
+   mkdir ./CMOR
+fi
+#
+# Deduce time range of data
+#
+#
+# Parse first filename
+#
+FILE=`/bin/ls *nc | head -1`
+FLEN=`echo $FILE | wc -c`
+NDOT=0
+CSTR=1
+while [ $CSTR -le $FLEN ] ; do
+  CURC=`echo $FILE | cut -c${CSTR}-${CSTR}`
+  if [ "$CURC" = "." ] ; then
+     NDOT=`expr '(' $NDOT ')' '+' '1'`
+  fi
+  CSTR=`expr '(' $CSTR ')' '+' '1'`
+done
+IDOT=1
+DCAS=1
+DVAR=1
+DHT1=1
+DHT2=1
+DPFX=1
+DSFX=1
+while [ $IDOT -le $NDOT ] ; do
+  CURC=`echo $FILE | cut -d "." -f${IDOT}-${IDOT}`
+  case "$CURC" in
+    monthly | daily )
+      DPFX=`expr '(' $IDOT ')' '+' '1'`
+      DSFX=`expr '(' $DPFX ')' '+' '1'`
+      DHT1=$IDOT ;;
+  esac
+  IDOT=`expr '(' $IDOT ')' '+' '1'`
+done
+DCMP=$DHT1
+DPFX=`expr '(' $DPFX ')' '-' '1'`
+DSFX=`expr '(' $DPFX ')' '+' '1'`
+#
+OUTPFX=`echo $FILE | cut -d"." -f1-${DPFX}`
+TIMESAMP=`echo $FILE | cut -d"." -f${DSFX}-`
+#echo $TIMESAMP
+#
+# Clean up old files first
+#
+rm -f .H.*nc *nc.pid*.tmp A.nc B.nc C.nc .BURN_*
+#
+# CLM fields and equivalences
+#
+SHORT_CLM_1="burntArea cCwd cLeaf cLitter cMisc cProduct cSoilMedium cSoilSlow cSoil cVeg cWood evspsblsoi evspsblveg fFire fVegLitter gpp hfdsn lai lwsnl mrfso mrro mrros mrsos nbp nppLeaf npp nppRoot nppWood prveg ra rGrowth rh rMaint snc snd snm snw tsl tran sfcWind hfls hfss hurs huss prsn ps rlds rlus rsds rsus tas cSoilFast fLuc tws"
+SNAME_CLM_1="area_fraction wood_debris_carbon_content leaf_carbon_content litter_carbon_content miscellaneous_living_matter_carbon_content carbon_content_of_products_of_anthropogenic_land_use_change medium_soil_pool_carbon_content slow_soil_pool_carbon_content soil_carbon_content vegetation_carbon_content wood_carbon_content water_evaporation_flux_from_soil water_evaporation_flux_from_canopy surface_upward_mass_flux_of_carbon_dioxide_expressed_as_carbon_due_to_emission_from_fires_excluding_anthropogenic_land_use_change litter_carbon_flux gross_primary_productivity_of_carbon surface_downward_heat_flux_in_snow leaf_area_index liquid_water_content_of_snow_layer soil_frozen_water_content runoff_flux surface_runoff_flux moisture_content_of_soil_layer surface_net_downward_mass_flux_of_carbon_dioxide_expressed_as_carbon_due_to_all_land_processes net_primary_productivity_of_carbon_accumulated_in_leaves net_primary_productivity_of_carbon net_primary_productivity_of_carbon_accumulated_in_roots net_primary_productivity_of_carbon_accumulated_in_wood precipitation_flux_onto_canopy plant_respiration_carbon_flux surface_upward_carbon_mass_flux_due_to_plant_respiration_for_biomass_growth heterotrophic_respiration_carbon_flux surface_upward_carbon_mass_flux_due_to_plant_respiration_for_biomass_maintenance surface_snow_area_fraction surface_snow_thickness surface_snow_melt_flux surface_snow_amount soil_temperature transpiration_flux wind_speed surface_upward_latent_heat_flux surface_upward_sensible_heat_flux relative_humidity specific_humidity snowfall_flux surface_air_pressure surface_downwelling_longwave_flux_in_air surface_upwelling_longwave_flux_in_air surface_downwelling_shortwave_flux_in_air surface_upwelling_shortwave_flux_in_air air_temperature fast_soil_pool_carbon_content surface_net_upward_mass_flux_of_carbon_dioxide_expressed_as_carbon_due_to_emission_from_anthropogenic_land_use_change total_water_storage"
+UNITS_CLM_1="% kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 W;m-2 1 kg;m-2 kg;m-2 kg;m-2;s-1 kg;m-2;s-1 kg;m-2 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 kg;m-2;s-1 % m kg;m-2;s-1 kg;m-2 K kg;m-2;s-1 m;s-1 W;m-2 W;m-2 % 1 kg;m-2;s-1 Pa W;m-2 W;m-2 W;m-2 W;m-2 K kg;m-2 kg;m-2;s-1 kg;m-2"
+CLMVR_CLM_1="ANN_FAREA_BURNED CWDC LEAFC TOTLITC STORVEGC TOTPRODC SOIL3C SOIL4C TOTSOMC_1m TOTVEGC WOODC QSOIL QVEGE COL_FIRE_CLOSS LITFALL GPP FGR TLAI SNOWLIQ SOILICE QRUNOFF QOVER SOILWATER_CLM_10CM NBP LEAFC_ALLOC NPP FROOTC_ALLOC WOODC_ALLOC QINTR AR GR HR MR FSNO SNOWDP QMELT H2OSNO TSOI QVEGT WIND EFLX_LH_TOT FSH RH2M Q2M SNOW PBOT FLDS FIRE FSDS FSR TSA SOIL1C LAND_USE_FLUX TWS"
+#
+SHORT_CLM_2="mrlsl mrso pr"
+SNAME_CLM_2="moisture_content_of_soil_layer soil_moisture_content precipitation_flux"
+UNITS_CLM_2="kg;m-2 kg;m-2 kg;m-2;s-1"
+CLMVR_CLM_2="SOILLIQ;SOILICE SOILICE;SOILLIQ RAIN;SNOW"
+#
+SHORT_CLM_3="cRoot fLitterSoil sootsn evspsbl"
+SNAME_CLM_3="root_carbon_content carbon_mass_flux_into_soil_from_litter soot_content_of_surface_snow water_evaporation_flux"
+UNITS_CLM_3="kg;m-2 kg;m-2;s-1 kg;m-2 kg;m-2;s-1"
+CLMVR_CLM_3="FROOTC;LIVE_ROOTC;DEAD_ROOTC LITR1C_TO_SOIL1C;LITR2C_TO_SOIL2C;LITR3C_TO_SOIL3C SNOBCMSL;SNODSTMSL;SNOOCMSL QSOIL;QVEGE;QVEGT"
+#
+# CMIP5 fields that have easy conversions from CLM, e.g. multiplication or no change
+#
+ICM5V=1
+for ICM5VAR in $SHORT_CLM_1 ; do
+  CONVERT=0
+  UNALTER=0
+  REVSIGN=0
+  DIV1000=0
+  DIV1MIL=0
+  TIME100=0
+  T100D12=0
+  SUMLEV1=0
+  MISSTOZ=0
+  MONSCAL=0
+  HFLS3VR=0
+  CM5NAME=$ICM5VAR
+  CHECK=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\." | wc -c`
+  if [ $CHECK -ne 0 ] ; then
+    FILE=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\."`
+    if [ -f ./CMOR/${FILE} ] ; then
+      echo "./CMOR/"${FILE}" exists. Moving on..."
+      CONVERT=0
+      ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+    fi
+  else
+    echo -n "File with "${CM5NAME}" does not exist. Will create if possible, "
+    CLMVARN=`echo $CLMVR_CLM_1 | cut -d" " -f${ICM5V}`
+    if [ ${CM5NAME} == "burntArea" ] ; then
+      CLMFILE=`/bin/ls | egrep "\.(${CLMVARN}|FAREA_BURNED)\." | wc -c`
+    elif [ ${CM5NAME} == "hfls" ] ; then
+      CLMFILE=`/bin/ls | egrep "\.(${CLMVARN}|FCTR|FCEV|FGEV)\." | wc -c`
+    else
+      CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\." | wc -c`
+    fi
+    if [ $CLMFILE -ne 0 ] ; then
+      if [ ${CM5NAME} == "burntArea" ] ; then
+        CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\." | wc -c`
+        if [ $CLMFILE -eq 0 ] ; then
+           CLMVARN="FAREA_BURNED"
+           CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\."`
+           MONSCAL=1
+        else
+           CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\."`
+        fi
+      else
+        CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\."`
+      fi
+      if [ ${CM5NAME} == "hfls" ] ; then
+        CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\." | wc -c`
+        if [ $CLMFILE -eq 0 ] ; then
+           CLMVARN1="FCTR"
+           CLMVARN2="FCEV"
+           CLMVARN3="FGEV"
+           CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\." | wc -c`
+           if [ $CLMFILE1 -ne 0 ] ; then
+             CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\." | wc -c`
+             if [ $CLMFILE2 -ne 0 ] ; then
+               CLMFILE3=`/bin/ls | egrep "\.${CLMVARN3}\." | wc -c`
+               if [ $CLMFILE3 -ne 0 ] ; then
+                 HFLS3VR=1
+               fi
+             fi
+           fi
+        else
+           CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\."`
+        fi
+      else
+        CLMFILE=`/bin/ls | egrep "\.${CLMVARN}\."`
+      fi
+      echo "using "${CLMVARN}
+      CLMNAME=$CLMVARN
+      CM5UNIT=`echo $UNITS_CLM_1 | cut -d" " -f${ICM5V} | sed -e 's/;/ /g'`
+      CM5STDN=`echo $SNAME_CLM_1 | cut -d" " -f${ICM5V}`
+      case "$CM5NAME" in 
+        cCwd | cLeaf | cLitter | cMisc | cProduct | cSoilFast | cSoilMedium | cSoilSlow | cSoil | cVeg | cWood | \
+        fFire | fVegLitter | gpp | nbp | nppLeaf | npp | nppRoot | nppWood | ra | rGrowth | rh | rMaint | fLuc )
+          CONVERT=1
+          DIV1000=1 ;;
+        hfdsn )
+          CONVERT=1
+          REVSIGN=1 ;;
+        evspsblsoi | evspsblveg | lai | mrro | mrros | mrsos | prveg | tsl | tran | hfls | \
+        sfcWind | hfss | tas | ts | hurs | huss | rlds | rlus | rsus | rsds | ps | pr | prsn )
+          CONVERT=1
+          UNALTER=1 ;;
+        lwsnl | snd | snm | snw )
+          CONVERT=1
+          MISSTOZ=1 ;;
+        snc )
+          CONVERT=1
+          TIME100=1 ;;
+        burntArea )
+          CONVERT=1
+          if [ $MONSCAL -eq 0 ] ; then
+            T100D12=1
+          else
+            T100D12=0
+          fi ;;
+        mrfso )
+          CONVERT=1
+          SUMLEV1=1 ;;     
+        * )
+          CONVERT=0
+          echo "Need XW for "${CM5NAME} ;;
+      esac
+    else
+      CONVERT=0
+      echo "but field "${CLMVARN}" unavailable."
+    fi
+    ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+  fi
+#
+# Divide by 1000 - g to kg
+#
+  if [ $CONVERT -eq 1 ] ; then
+    if [ $DIV1000 -eq 1 ] ; then
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME}/1000" ${CLMFILE} ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} divide by 1000 to convert g to kg" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Reverse sign
+#
+    if [ $REVSIGN -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      ${NCAP2} -v -O -s "${CM5NAME}=-1*${CLMNAME}" ${CLMFILE} ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} reversed sign" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+#          if [ ${CM5NAME} == "hfdsn" ] ; then
+#             ncatted -a positive,${CM5NAME},c,c,"up" ${MIPFILE}
+#          fi
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Multiply by 100
+#
+    if [ $TIME100 -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME}*100" ${CLMFILE} ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} times 100 to convert to percentage" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Multiply by 100 then divide by 12 - ANN_FAREA_BURNED ONLY
+#
+    if [ $T100D12 -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME}*(100/12)" ${CLMFILE} ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} times 100 and divided by 12" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Scale by number of days in the month - burntArea derived from FAREA_BURNED *ONLY*
+#
+    if [ $MONSCAL -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      NTIM=`ncdump -h $CLMFILE | egrep "time = " | cut -d"(" -f2 | cut -d" " -f1`
+      ITIM=1
+      while [ $ITIM -le $NTIM ] ; do
+        IVAL=$ITIM
+        if [ $IVAL -lt 1000 ] ; then
+          IVAL=0${IVAL}
+        fi
+        if [ $IVAL -lt 100 ] ; then
+          IVAL=0${IVAL}
+        fi
+        if [ $IVAL -lt 10 ] ; then
+          IVAL=0${IVAL}
+        fi
+#
+        IMON=$((ITIM%12))
+# Jan, Mar, May, Jul, Aug, Oct, Dec
+        case "$IMON" in
+          1 | 3 | 5 | 7 | 8 | 10 | 0 )
+           RESCALE=`expr '31' '*' '86400' '*' '100'`
+           ;;
+# Apr, Jun, Sep, Nov
+          4 | 6 | 9 | 11 )
+           RESCALE=`expr '30' '*' '86400' '*' '100'`
+           ;;
+# Feb
+          2 )
+           RESCALE=`expr '28' '*' '86400' '*' '100'`
+           ;;
+        esac
+        IBURN=.BURN_${IVAL}
+        $NCKS -O -F -d time,${ITIM},${ITIM} $CLMFILE ${IBURN}
+        ncap2 -v -O -s "burntArea=FAREA_BURNED*${RESCALE}" ${IBURN} ${IBURN}
+        ITIM=$((ITIM+1))
+      done
+      ncrcat -O .BURN_* $MIPFILE
+      if [ $? -eq 0 ] ; then
+        rm -f .BURN_*
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} times days per month and 86400*100 to convert to percentage" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Sum over depths
+#
+    if [ $SUMLEV1 -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME},levgrnd ${CLMFILE} .H.${CLMFILE}
+      ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} ${CLMFILE} A.nc
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        ${NCAP2} -v -O -s "where(${CLMNAME} > 5000) ${CLMNAME}=5000" A.nc ${MIPFILE}
+        if [ $? -ne 0 ] ; then
+          echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+        else
+          ncrename -v ${CLMNAME},${CM5NAME} ${MIPFILE}
+          echo ${CLMFILE}" values converted"
+          $NCKS -A .H.${CLMFILE} ${MIPFILE}
+          if [ $? -eq 0 ] ; then
+            echo ${MIPFILE}" metadata restored"
+            rm -f .H.${CLMFILE} A.nc
+            ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+            ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+            ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} summed over soil layer depths" ${MIPFILE}
+            ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+            ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+            ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+            ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+            echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+            mv ${MIPFILE} ./CMOR
+#            $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#            if [ $? -eq 0 ] ; then
+#              echo ${MIPFILE}" conversion complete"
+#            else
+#              echo ${MIPFILE}" conversion failed. Exit."
+#            fi    
+          else
+            echo ${MIPFILE}" conversion failed. Exit."
+          fi    
+        fi
+      fi    
+    fi    
+#
+# Reset missing values to zero
+#
+    if [ $MISSTOZ -eq 1 ] ; then
+#      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+      echo ${CLMNAME}" converting to "${CM5NAME}
+      $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
+      $NCKS -O -v    ${CLMNAME} ${CLMFILE} A.nc
+      ncatted -a missing_value,${CLMNAME},d,f,0 A.nc
+      ncatted -a _FillValue,${CLMNAME},d,f,0    A.nc
+      ${NCAP2} -v -O -s "where (${CLMNAME} > 1.e20) ${CLMNAME}=0" A.nc ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
+      else
+        ncrename -v ${CLMNAME},${CM5NAME} ${MIPFILE}
+        echo ${CLMFILE}" values converted"
+        $NCKS -A .H.${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE} A.nc
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} missing values set to 0" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi
+    fi    
+#
+# No change 
+#
+    if [ $UNALTER -eq 1 ] ; then
+      if [ $HFLS3VR -eq 1 ] ; then
+        CLMVARN1="FCTR"
+        CLMVARN2="FCEV"
+        CLMVARN3="FGEV"
+        CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\." | wc -c`
+        if [ $CLMFILE1 -ne 0 ] ; then
+          CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\." | wc -c`
+          if [ $CLMFILE2 -ne 0 ] ; then
+            CLMFILE3=`/bin/ls | egrep "\.${CLMVARN3}\." | wc -c`
+            if [ $CLMFILE3 -ne 0 ] ; then
+              echo "Using "${CLMVARN1}" and "${CLMVARN2}" and "${CLMVARN3}
+              CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\."`
+              CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\."`
+              CLMFILE3=`/bin/ls | egrep "\.${CLMVARN3}\."`
+              CLMNAME1=$CLMVARN1
+              CLMNAME2=$CLMVARN2
+              CLMNAME3=$CLMVARN3
+#              MIPFILE=`echo $CLMFILE1 | sed -e "s/${CLMNAME1}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+              CM5UNIT="W m-2"
+              CM5STDN="surface_upward_latent_heat_flux"
+              $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+              $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+              $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+              $NCKS -O -v    ${CLMNAME3} ${CLMFILE3} C.nc
+              $NCKS -A A.nc C.nc
+              $NCKS -A B.nc C.nc
+              ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}+${CLMNAME3}" C.nc ${MIPFILE}
+              if [ $? -ne 0 ] ; then
+                echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" to "${CM5NAME}" failed."
+              else
+                echo ${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" values converted"
+                $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+                if [ $? -eq 0 ] ; then
+                  echo ${MIPFILE}" metadata restored"
+                  rm -f .H.${CLMFILE1} A.nc B.nc C.nc
+                  ncatted -a long_name,${CM5NAME},d,c,"" ${MIPFILE}
+                  ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+                  ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1},${CLMNAME2},${CLMNAME3}" ${MIPFILE}
+                  ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}+${CLMNAME3}" ${MIPFILE}
+                  ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+                  ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+                  ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+                  ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+                  echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+                  mv ${MIPFILE} ./CMOR
+                else
+                 echo ${MIPFILE}" conversion failed. Exit."
+                fi    
+              fi    
+            fi    
+          fi    
+        fi    
+      else
+#        MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+        echo ${CLMFILE}" values copied to "${MIPFILE}
+        cp ${CLMFILE} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          ncrename -v ${CLMNAME},${CM5NAME} ${MIPFILE}
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME} unchanged" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+  fi    
+done
+#
+# CMIP5 fields that are dependent on two CLM fields
+#
+ICM5V=1
+for ICM5VAR in $SHORT_CLM_2 ; do
+  CONVERT=0
+  UNALTER=0
+  DIV1000=0
+  SUMLEVS=0
+  CM5NAME=$ICM5VAR
+  CHECK=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\." | wc -c`
+  if [ $CHECK -ne 0 ] ; then
+    FILE=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\."`
+    if [ -f ./CMOR/${FILE} ] ; then
+      echo "./CMOR/"${FILE}" exists. Moving on..."
+      CONVERT=0
+      ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+    fi
+  else
+    echo -n "File with "${CM5NAME}" does not exist. Will create if possible, "
+    CLMVARN1=`echo $CLMVR_CLM_2 | cut -d" " -f${ICM5V} | cut -d";" -f1`
+    CLMVARN2=`echo $CLMVR_CLM_2 | cut -d" " -f${ICM5V} | cut -d";" -f2`
+    CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\." | wc -c`
+    if [ $CLMFILE1 -ne 0 ] ; then
+      CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\." | wc -c`
+      if [ $CLMFILE2 -ne 0 ] ; then
+        CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\."`
+        CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\."`
+        echo "using "${CLMVARN1}" and "${CLMVARN2}
+        CLMNAME1=$CLMVARN1
+        CLMNAME2=$CLMVARN2
+        CM5UNIT=`echo $UNITS_CLM_2 | cut -d" " -f${ICM5V} | sed -e 's/;/ /g'`
+        CM5STDN=`echo $SNAME_CLM_2 | cut -d" " -f${ICM5V}`
+        CONVERT=1
+        case "$CM5NAME" in 
+          mrlsl )
+            UNALTER=1 ;;     
+          mrso )
+            SUMLEVS=1 ;;     
+          pr )
+            UNALTER=1 ;;
+          * )
+            CONVERT=0
+            echo "Need XW for "${CM5NAME} ;;
+        esac
+      else
+        CONVERT=0
+        echo -n "but field "${CLMVARN2}" unavailable."
+      fi
+    else
+      CONVERT=0
+      echo "but field "${CLMVARN1}" unavailable."
+    fi
+    ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+  fi
+#
+# Divide by 1000 - g to kg
+#
+  if [ $CONVERT -eq 1 ] ; then
+#    MIPFILE=`echo $CLMFILE1 | sed -e "s/${CLMNAME1}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+    echo ${CLMNAME1}" and "${CLMNAME2}" converting to "${CM5NAME}
+    if [ $DIV1000 -eq 1 ] ; then
+      $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+      $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+      $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -A     A.nc B.nc
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}/1000+${CLMNAME2}/1000" B.nc ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE1}" and "${CLMFILE2}" values converted"
+        $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE1} A.nc B.nc
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1} and ${CLMNAME2}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}, divided by 1000 to convert g to kg" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# Sum over depths, and add the two fields
+#
+    if [ $SUMLEVS -eq 1 ] ; then
+      $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+      ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME1} ${CLMFILE1} A.nc
+      ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -A A.nc B.nc
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc C.nc
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMFILE1}" and "${CLMFILE2}" values converted"
+        ${NCAP2} -v -O -s "where(${CM5NAME} > 5000) ${CM5NAME}=5000" C.nc ${MIPFILE}
+        if [ $? -ne 0 ] ; then
+          echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
+        else
+          echo ${CLMNAME1}" and "${CLMNAME2}" values converted"
+          $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+          if [ $? -eq 0 ] ; then
+            echo ${MIPFILE}" metadata restored"
+            rm -f .H.${CLMFILE1} A.nc B.nc C.nc
+            ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+            ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1} and ${CLMNAME2}" ${MIPFILE}
+            ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}, summed over soil depths, capped at 5000 kg m-2" ${MIPFILE}
+            ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+            ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+            ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+            ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+            echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+            mv ${MIPFILE} ./CMOR
+#            $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#            if [ $? -eq 0 ] ; then
+#              echo ${MIPFILE}" conversion complete"
+#            else
+#              echo ${MIPFILE}" conversion failed. Exit."
+#            fi    
+          else
+            echo ${MIPFILE}" conversion failed. Exit."
+          fi    
+        fi    
+      fi    
+    fi    
+#
+# No change - just add
+#
+    if [ $UNALTER -eq 1 ] ; then
+      $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+      $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+      $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -A A.nc B.nc
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMVARN1}" and "${CLMVARN2}" values converted"
+        $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE1} A.nc B.nc
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1} and ${CLMNAME2}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+  fi    
+done
+#
+# CMIP5 fields that are dependent on three CLM fields
+#
+ICM5V=1
+for ICM5VAR in $SHORT_CLM_3 ; do
+  CONVERT=0
+  UNALTER=0
+  DIV1000=0
+  CM5NAME=$ICM5VAR
+  CHECK=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\." | wc -c`
+  if [ $CHECK -ne 0 ] ; then
+    FILE=`/bin/ls ./CMOR | egrep "\.${CM5NAME}\."`
+    if [ -f ./CMOR/${FILE} ] ; then
+      echo "./CMOR/"${FILE}" exists. Moving on..."
+      CONVERT=0
+      ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+    fi
+  else
+    echo -n "File with "${CM5NAME}" does not exist. Will create if possible, "
+    CLMVARN1=`echo $CLMVR_CLM_3 | cut -d" " -f${ICM5V} | cut -d";" -f1`
+    CLMVARN2=`echo $CLMVR_CLM_3 | cut -d" " -f${ICM5V} | cut -d";" -f2`
+    CLMVARN3=`echo $CLMVR_CLM_3 | cut -d" " -f${ICM5V} | cut -d";" -f3`
+    CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\." | wc -c`
+    if [ $CLMFILE1 -ne 0 ] ; then
+      CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\." | wc -c`
+      if [ $CLMFILE2 -ne 0 ] ; then
+        CLMFILE3=`/bin/ls | egrep "\.${CLMVARN3}\." | wc -c`
+        if [ $CLMFILE3 -ne 0 ] ; then
+          CLMFILE1=`/bin/ls | egrep "\.${CLMVARN1}\."`
+          CLMFILE2=`/bin/ls | egrep "\.${CLMVARN2}\."`
+          CLMFILE3=`/bin/ls | egrep "\.${CLMVARN3}\."`
+          echo "using "${CLMVARN1}" and "${CLMVARN2}" and "${CLMVARN3}
+          CLMNAME1=$CLMVARN1
+          CLMNAME2=$CLMVARN2
+          CLMNAME3=$CLMVARN3
+          CM5UNIT=`echo $UNITS_CLM_3 | cut -d" " -f${ICM5V} | sed -e 's/;/ /g'`
+          CM5STDN=`echo $SNAME_CLM_3 | cut -d" " -f${ICM5V}`
+          CONVERT=1
+          case "$CM5NAME" in 
+            cRoot | fLitterSoil )
+              DIV1000=1 ;;
+            sootsn | evspsbl )
+              UNALTER=1 ;;     
+            * )
+              CONVERT=0
+              echo "Need XW for "${CM5NAME} ;;
+          esac
+        else
+          CONVERT=0
+          echo -n "but field "${CLMVARN3}" unavailable."
+        fi
+      else
+        CONVERT=0
+        echo "but field "${CLMVARN2}" unavailable."
+      fi
+    else
+      CONVERT=0
+      echo "but field "${CLMVARN1}" unavailable."
+    fi
+    ICM5V=`expr '(' $ICM5V ')' '+' '1'`
+  fi
+#
+# Divide by 1000 - g to kg
+#
+  if [ $CONVERT -eq 1 ] ; then
+#    MIPFILE=`echo $CLMFILE1 | sed -e "s/${CLMNAME1}/${CM5NAME}/g"`
+      MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
+    echo ${CLMNAME1}" and "${CLMNAME2}" converting to "${CM5NAME}
+    if [ $DIV1000 -eq 1 ] ; then
+      $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+      $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+      $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -O -v    ${CLMNAME3} ${CLMFILE3} C.nc
+      $NCKS -A A.nc C.nc
+      $NCKS -A B.nc C.nc
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}/1000+${CLMNAME2}/1000+${CLMNAME3}/1000" C.nc ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" values converted"
+        $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE1} A.nc B.nc C.nc
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1} and ${CLMNAME2} and ${CLMNAME3}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}+${CLMNAME3}, divided by 1000 to convert g to kg" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+#
+# No change - just add
+#
+    if [ $UNALTER -eq 1 ] ; then
+      $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+      $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+      $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -O -v    ${CLMNAME3} ${CLMFILE3} C.nc
+      $NCKS -A A.nc C.nc
+      $NCKS -A B.nc C.nc
+      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}+${CLMNAME3}" C.nc ${MIPFILE}
+      if [ $? -ne 0 ] ; then
+        echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" to "${CM5NAME}" failed."
+      else
+        echo ${CLMNAME1}" and "${CLMNAME2}" and "${CLMNAME3}" values converted"
+        $NCKS -A .H.${CLMFILE1} ${MIPFILE}
+        if [ $? -eq 0 ] ; then
+          echo ${MIPFILE}" metadata restored"
+          rm -f .H.${CLMFILE1} A.nc B.nc C.nc
+          ncatted -a standard_name,${CM5NAME},o,c,"${CM5STDN}" ${MIPFILE}
+          ncatted -a original_name,${CM5NAME},o,c,"${CLMNAME1},${CLMNAME2},${CLMNAME3}" ${MIPFILE}
+          ncatted -a comment,${CM5NAME},o,c,"${CLMNAME1}+${CLMNAME2}+${CLMNAME3}" ${MIPFILE}
+          ncatted -a units,${CM5NAME},o,c,"${CM5UNIT}" ${MIPFILE}
+          ncatted -a missing_value,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a _FillValue,${CM5NAME},o,f,-1.e20 ${MIPFILE}
+          ncatted -a cell_methods,${CM5NAME},o,c,"time: mean" ${MIPFILE}
+          echo ${MIPFILE}" COMPLETE, moved to ./CMOR"
+          mv ${MIPFILE} ./CMOR
+#          $NCKS -O -4 -L 1 ${MIPFILE} temp.nc ; mv temp.nc ${MIPFILE}
+#          if [ $? -eq 0 ] ; then
+#            echo ${MIPFILE}" conversion complete"
+#          else
+#            echo ${MIPFILE}" conversion failed. Exit."
+#          fi    
+        else
+          echo ${MIPFILE}" conversion failed. Exit."
+        fi    
+      fi    
+    fi    
+  fi    
+done
+#
+exit
