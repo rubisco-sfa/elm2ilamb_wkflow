@@ -1,5 +1,7 @@
 #!/bin/bash
-CASE=interpfv09_20160308.A_WCYCL2000.ne30_oEC.edison.alpha3_01
+#CASE=interpfv09_20160308.A_WCYCL2000.ne30_oEC.edison.alpha3_01
+CASE=interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
+
 MODEL=clm2
 HIST=h0
 MIYEAR=0001

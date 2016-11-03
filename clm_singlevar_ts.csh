@@ -1,5 +1,11 @@
 #!/bin/tcsh
 module load udunits
+module unload pgi
+module load pgi/14.7
+module unload netcdf
+module load netcdf/4.3.3.1
+module list
+which ncks
 
 # Permafrost RCN settings
 set caseid       = clm45bgc_hrv_1DDD_1deg4508_rcp85_cIMPEDv2
@@ -60,30 +66,31 @@ set experiment   = historical
 set model        = ALMv1_CRUNCEP
 
 #ACME first ~5y water cycle experiment
-set caseid       = interpfv09_20160308.A_WCYCL2000.ne30_oEC.edison.alpha3_01
+#set caseid       = interpfv09_20160308.A_WCYCL2000.ne30_oEC.edison.alpha3_01
+set caseid       = interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
 set centuries    = (19 20)
 set year_range   = 1970-2014
-set caseidpath   = /lustre/atlas1/cli106/world-shared/mxu/20160308.A_WCYCL2000/fv09_masked_new/explode/
-set outputpath   = /lustre/atlas1/cli106/world-shared/mxu/20160308.A_WCYCL2000/ILAMB/
+set caseidpath   = /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/ILAMB/ALM_WCYCL/
+set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/
 set experiment   = historical
 set model        = A_WCYCL2000
 
 
-set caseid       = ALM_SPtest360x720_eos
-set centuries    = (19 20)
-set year_range   = 1980-2010
-set caseidpath   = /lustre/atlas1/cli106/scratch/hof/monthly_h0_1850-2010_ilambvars_SP/
-set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/MODELS/
-set experiment   = historical
-set model        = ALM_SP
-
-set caseid       = interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
-set centuries    = (19 20)
-set year_range   = 1981-2010
-set caseidpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/explode/
-set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/
-set experiment   = historical
-set model        = ALM_WCYCL
+#set caseid       = ALM_SPtest360x720_eos
+#set centuries    = (19 20)
+#set year_range   = 1980-2010
+#set caseidpath   = /lustre/atlas1/cli106/scratch/hof/monthly_h0_1850-2010_ilambvars_SP/
+#set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/MODELS/
+#set experiment   = historical
+#set model        = ALM_SP
+#
+#set caseid       = interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
+#set centuries    = (19 20)
+#set year_range   = 1981-2010
+#set caseidpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/explode/
+#set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/
+#set experiment   = historical
+#set model        = ALM_WCYCL
 
 
 
@@ -255,7 +262,8 @@ if ($convert_to_cmip == 1) then
    #cp /glade/u/home/dlawren/bin/clm_to_mip .
 
    #mxu add
-   /bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/clm_to_mip $outputpath/$caseid/
+   #/bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/clm_to_mip $outputpath/$caseid/
+   /bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/alm2lamb_wkflow/clm_to_mip $outputpath/$caseid/
    cd $outputpath/$caseid/
    echo ./clm_to_mip ${model} ${experiment} ${year_range}
    ./clm_to_mip ${model} ${experiment} ${year_range}
