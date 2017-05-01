@@ -1,111 +1,139 @@
 #!/bin/tcsh
-module load udunits
-module unload pgi
-module load pgi/14.7
-module unload netcdf
-module load netcdf/4.3.3.1
-module list
-which ncks
-
-# Permafrost RCN settings
-set caseid       = clm45bgc_hrv_1DDD_1deg4508_rcp85_cIMPEDv2
-set centuries    = (20 21 22)
-set year_range   = 2006-2299
-#set centuries    = (18 19 20)
-#set year_range   = 1850-2005
-set caseidpath     = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-set outputpath   = /glade/scratch/dlawren/permafrostRCN_modeldata
-
-#CAM5-CLM4.5 settings
-set caseid       = cam5clm45bgc_2degcesm13beta11_2000
-set centuries    = (00)
-set year_range   = 1-10 
-set caseidpath     = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-set outputpath   = /glade/scratch/dlawren/CAM5-CLM4.5BGC
-
-#ILAMB
-set caseid       = clm40cn_1deg4502_hist
-set centuries    = (18 19 20)
-set year_range   = 185001-201012
-set caseidpath     = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-set outputpath   = /glade/p/work/dlawren/ILAMB
-set experiment   = historical
-set model        = CLM45bgc_GSWP3
-
-#GSWP3
-#set caseid       = GSWP3_0.5d_IHISTCLM45
-#set centuries    = (19 20)
-#set year_range   = 1970-2010
-#set caseidpath     = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-#set outputpath   = /glade/p/work/dlawren/ILAMB
-
-#LUMIP
-set caseid       = b.e11.B1850C5CN.f09_g16.10mil_reg_tdf
-set centuries    = (18 19)
-set year_range   = 1850-1920
-set caseidpath   = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-set outputpath   = /glade/scratch/dlawren/LUMIP/CESM
-set experiment   = 10mil_reg_tdf
-set model        = CCSM4
-
-set caseid       = b.e11.B1850C5CN.f09_g16.005
-set centuries    = (10 11)
-set year_range   = 1001-1131
-set caseidpath   = /glade/scratch/dlawren/archive/$caseid/lnd/hist
-set outputpath   = /glade/scratch/dlawren/LUMIP/CESM
-set experiment   = picontrol
-set model        = CCSM4
-
-#ALMv1_CRUNCEP
-set caseid       = GLOB_ILAMB_TITAN_TRANS
-set centuries    = (19 20)
-set year_range   = 1970-2010
-set caseidpath    = /home/forrest/output_for_ilamb/monthly_h0_1970-2010
-set outputpath   = /home/forrest/output_for_ilamb/ILAMB
-set experiment   = historical
-set model        = ALMv1_CRUNCEP
-
-#ACME first ~5y water cycle experiment
-#set caseid       = interpfv09_20160308.A_WCYCL2000.ne30_oEC.edison.alpha3_01
-set caseid       = interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
-set centuries    = (19 20)
-set year_range   = 1970-2014
-set caseidpath   = /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/ILAMB/ALM_WCYCL/
-set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/
-set experiment   = historical
-set model        = A_WCYCL2000
 
 
-#set caseid       = ALM_SPtest360x720_eos
-#set centuries    = (19 20)
-#set year_range   = 1980-2010
-#set caseidpath   = /lustre/atlas1/cli106/scratch/hof/monthly_h0_1850-2010_ilambvars_SP/
-#set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/MODELS/
-#set experiment   = historical
-#set model        = ALM_SP
-#
-#set caseid       = interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01
-#set centuries    = (19 20)
-#set year_range   = 1981-2010
-#set caseidpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/explode/
-#set outputpath   = /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/ALM_WCYCL/
-#set experiment   = historical
-#set model        = ALM_WCYCL
+# Author: ??? who?
+
+# Modification history:
+# Required software: NCO toolkit 
+
+# Min Xu: 2017-04-28: add command line arguments and clean codes
 
 
 
-set compress     = 1
-set convert_to_cmip = 1
-set ilamb_fields = 0
+set ilamb_fields = 0        # define varaible list for ILAMB
+set compress = 1            # 1 - compress; 0 - noncompress
+set convert_to_cmip = 0     # 0 - group monthly files to century files; 1 - further convert them following the cmip convention 
+set nconcurrent  = 6        # number of concurrent processes to run, more = faster
 
-mkdir $outputpath
-mkdir $outputpath/$caseid
+
+
+set SrcDir = `pwd`
+
+
+alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"'
+
+if ($#argv == 0) then
+   echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \
+                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"
+   exit 1
+endif
+
+
+# command line arguments:
+
+
+set longargs = ilamb,cmip,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
+set shrtargs = c:T:y:i:o:e:m:
+set CmdLine=(`getopt -s tcsh  -o  $shrtargs --long $longargs -- $argv:q`)
+
+if ($? != 0) then 
+  echo "Terminating..." >/dev/stderr
+  exit 1
+endif
+
+eval set argv=\($CmdLine:q\)
+
+while (1)
+	switch($1:q)
+	case -c:
+        case --caseid:
+                set caseid = $2
+		echo "The case name: "\`$2:q\' ; shift ; shift
+		breaksw
+	case -T:
+        case --centuries:
+                set centuries = `echo $2:q | sed 's/,/ /g'`
+		echo "The case simulated centuries: "\`$2:q\' ; shift ; shift
+		breaksw
+	case -y:
+        case --year_range:
+                set year_range = $2
+		echo "The simulated year range: "\`$2:q\' ; shift ; shift
+		breaksw
+	case -i:
+        case --caseidpath:
+                set caseidpath = $2
+		echo "The directory of the case results: "\`$2:q\' ; shift ; shift
+		breaksw
+	case -o:
+        case --outputpath:
+                set outputpath = $2
+		echo "The output directory: "\`$2:q\' ; shift ; shift
+		breaksw
+
+        case -e:
+        case --experiment:
+                set experiment = $2
+		echo "The experiment name: "\`$2:q\' ; shift ; shift
+		breaksw
+
+        case -m:
+        case --model:
+                set model = $2
+		echo "The model name: "\`$2:q\' ; shift ; shift
+		breaksw
+
+        case --numcc:
+                set nconcurrent = $2
+		echo "Number of concurrent processes: "\`$2:q\' ; shift ; shift
+		breaksw
+
+        case --ilamb:
+                set ilamb_fields = 1
+                shift
+                breaksw 
+
+        case --cmip:
+                set convert_to_cmip = 1
+                shift
+                breaksw 
+
+	case --:
+		shift
+		break
+	default:
+		echo "Internal error!" ; exit 1
+
+        endsw
+end
+
+# foreach el ($argv:q) created problems for some tcsh-versions (at least
+# 6.02). So we use another shift-loop here:
+while ($#argv > 0)
+        echo "Remaining arguments:"
+	echo '--> '\`$1:q\'
+	shift
+        exit 1
+end
+
+
+if ( ! -f "clm_to_cmip" && $convert_to_cmip == 1) then
+   echo "clm_to_cmip is needed for converting model outputs following cmip conventions" 
+endif
+
+exit
+
+if ( ! -d $outputpath ) then
+   mkdir -p $outputpath
+endif
+
+if ( ! -d $outputpath/$caseid ) then
+   mkdir $outputpath/$caseid
+endif
 
 cd $outputpath/$caseid
 
-
-
-if ($ilamb_fields == 0) then 
+if ($ilamb_fields == 1) then 
   set fldlist_monthly = (ALT AR BTRAN CH4PROD DENIT EFLX_LH_TOT ELAI ER ESAI FAREA_BURNED \
     FCEV FCH4 FCH4TOCO2 FCOV FCTR FGEV FGR FGR12 FH2OSFC FINUNDATED FIRA FIRE FLDS FPG FPI \
     FPSN FROST_TABLE FSA FSAT FSDS FSH FSM FSNO FSR F_DENIT F_NIT GPP \
@@ -135,9 +163,8 @@ else
   set fldlist_annual = ( )
 endif
 
-set nconcurrent  = 6   # number of concurrent processes to run, more = faster
-#mxu
 
+#mxu
 # extract and concatenate monthly and annual fields for each century
 #
 foreach cent ($centuries)
@@ -263,7 +290,8 @@ if ($convert_to_cmip == 1) then
 
    #mxu add
    #/bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ILAMB/clm_to_mip $outputpath/$caseid/
-   /bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/alm2lamb_wkflow/clm_to_mip $outputpath/$caseid/
+   #/bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/alm2lamb_wkflow/clm_to_mip $outputpath/$caseid/
+   /bin/cp -f $SrcDir/clm_to_mip $outputpath/$caseid/
    cd $outputpath/$caseid/
    echo ./clm_to_mip ${model} ${experiment} ${year_range}
    ./clm_to_mip ${model} ${experiment} ${year_range}
