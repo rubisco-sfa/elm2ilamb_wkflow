@@ -1,4 +1,5 @@
-#!/bin/tcsh
+#!/bin/tcsh 
+
 
 
 # Author: ??? who?
@@ -7,7 +8,6 @@
 # Required software: NCO toolkit 
 
 # Min Xu: 2017-04-28: add command line arguments and clean codes
-
 
 
 set ilamb_fields = 0        # define varaible list for ILAMB
@@ -117,11 +117,9 @@ while ($#argv > 0)
 end
 
 
-if ( ! -f "clm_to_cmip" && $convert_to_cmip == 1) then
-   echo "clm_to_cmip is needed for converting model outputs following cmip conventions" 
+if ( ! -f "clm_to_mip" && $convert_to_cmip == 1) then
+   echo "clm_to_mip is needed for converting model outputs following cmip conventions" 
 endif
-
-exit
 
 if ( ! -d $outputpath ) then
    mkdir -p $outputpath
@@ -177,7 +175,7 @@ foreach cent ($centuries)
            if ( $cent == "19" ) then
    	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-* $caseid.$fld.monthly.$cent.nc
            else
-   	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-* $caseid.$fld.monthly.$cent.nc
+   	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
            endif
        else
            if ( $cent == "19" ) then
