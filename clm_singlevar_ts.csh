@@ -9,6 +9,9 @@
 
 # Min Xu: 2017-04-28: add command line arguments and clean codes
 
+# ATTN: the working directory is the output directory
+
+
 
 set ilamb_fields = 0        # define varaible list for ILAMB
 set compress = 1            # 1 - compress; 0 - noncompress
@@ -62,12 +65,12 @@ while (1)
 		breaksw
 	case -i:
         case --caseidpath:
-                set caseidpath = $2
+                set caseidpath = `readlink -f $2`
 		echo "The directory of the case results: "\`$2:q\' ; shift ; shift
 		breaksw
 	case -o:
         case --outputpath:
-                set outputpath = $2
+                set outputpath = `readlink -f $2`
 		echo "The output directory: "\`$2:q\' ; shift ; shift
 		breaksw
 
