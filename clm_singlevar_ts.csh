@@ -7,7 +7,9 @@
 # Required software: NCO toolkit 
 
 # Min Xu: 2017-04-28: add command line arguments and clean codes
+# Min Xu: 2017-12-27: add the --addfxflds to generate the fixed fields "areacella and sftlf"
 # ATTN: the working directory is the output directory
+
 set verbose
 
 set ilamb_fields = 0        # define varaible list for ILAMB
@@ -21,11 +23,11 @@ set add_fixed_flds = 0      # default, the fx fields won't be generated
 set SrcDir = `pwd`
 
 
-alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"'
+alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"'
 
 if ($#argv == 0) then
    echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \
-                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"
+                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"
    exit 1
 endif
 
@@ -33,7 +35,7 @@ endif
 # command line arguments:
 
 
-set longargs = ilamb,cmip,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
+set longargs = ilamb,cmip,addfxflds,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
 set shrtargs = c:T:y:i:o:e:m:
 set CmdLine=(`getopt -s tcsh  -o  $shrtargs --long $longargs -- $argv:q`)
 
@@ -96,6 +98,11 @@ while (1)
 
         case --cmip:
                 set convert_to_cmip = 1
+                shift
+                breaksw 
+
+        case --addfxflds:
+                set add_fixed_flds = 1
                 shift
                 breaksw 
 
@@ -165,10 +172,52 @@ else
 endif
 
 
+
+
 #mxu
 # extract and concatenate monthly and annual fields for each century
 #
 foreach cent ($centuries)
+
+   #mxu add the fixed fields output 
+   echo $cent
+   if ($add_fixed_flds == 1) then
+      foreach fil ($caseidpath/$caseid.clm2.h0.${cent}??-*)
+          echo $fil
+
+          set funits = `ncks -C -u -v area $fil |grep -i units|grep -o '".*"'|sed 's/"//g'` 
+
+          if ($funits == "km^2") then
+              ncap2 -O -h -4 -v -s 'areacella=udunits(area,"m2");' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          else if ($funits == "steradian")
+              ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"  
+          endif
+
+          ncatted -h -a units,areacella,o,c,'m2' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          #-ncks -h -4 -cv area $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          #-ncrename -h -v area,areacella areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+
+          ncatted -h -a standard_name,areacella,o,c,'cell_area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a original_name,areacella,o,c,'area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a _FillValue,areacella,o,f,1.e20 areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a missing_value,areacella,o,f,1.e20 areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+      
+          ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' $fil sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc" 
+          #-ncks -h -4 -cv landfrac $fil sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          #-ncrename -h -v landfrac,sftlf sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a _FillValue,sftlf,o,f,1.e20 sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a missing_value,sftlf,o,f,1.e20 sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          ncatted -h -a units,sftlf,o,c,'%' sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+          
+          break
+      end
+      
+      echo 'finished generating the fixed fields, areacella and sftlf'
+      exit
+   endif
 
    @ i = 0
    foreach fld ($fldlist_monthly)
