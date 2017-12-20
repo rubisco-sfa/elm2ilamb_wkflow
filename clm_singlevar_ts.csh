@@ -1,5 +1,4 @@
-#!/bin/tcsh 
-
+#!/bin/tcsh
 
 
 # Author: ??? who?
@@ -8,11 +7,8 @@
 # Required software: NCO toolkit 
 
 # Min Xu: 2017-04-28: add command line arguments and clean codes
-# Min Xu: 2017-12-27: add the --addfxflds to generate the fixed fields "areacella and sftlf"
 
-# ATTN: the working directory is the output directory
-
-
+set verbose
 
 set ilamb_fields = 0        # define varaible list for ILAMB
 set compress = 1            # 1 - compress; 0 - noncompress
@@ -24,11 +20,11 @@ set nconcurrent  = 6        # number of concurrent processes to run, more = fast
 set SrcDir = `pwd`
 
 
-alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"'
+alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"'
 
 if ($#argv == 0) then
    echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \
-                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"
+                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]"
    exit 1
 endif
 
@@ -36,7 +32,7 @@ endif
 # command line arguments:
 
 
-set longargs = ilamb,cmip,addfxflds,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
+set longargs = ilamb,cmip,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
 set shrtargs = c:T:y:i:o:e:m:
 set CmdLine=(`getopt -s tcsh  -o  $shrtargs --long $longargs -- $argv:q`)
 
@@ -66,12 +62,12 @@ while (1)
 		breaksw
 	case -i:
         case --caseidpath:
-                set caseidpath = `readlink -f $2`
+                set caseidpath = $2
 		echo "The directory of the case results: "\`$2:q\' ; shift ; shift
 		breaksw
 	case -o:
         case --outputpath:
-                set outputpath = `readlink -f $2`
+                set outputpath = $2
 		echo "The output directory: "\`$2:q\' ; shift ; shift
 		breaksw
 
@@ -102,11 +98,6 @@ while (1)
                 shift
                 breaksw 
 
-        case --addfxflds:
-                set add_fixed_flds = 1
-                shift
-                breaksw 
-
 	case --:
 		shift
 		break
@@ -126,9 +117,11 @@ while ($#argv > 0)
 end
 
 
-if ( ! -f "clm_to_mip" && $convert_to_cmip == 1) then
+if ( `where clm_to_mip` == "" && $convert_to_cmip == 1) then
    echo "clm_to_mip is needed for converting model outputs following cmip conventions" 
 endif
+
+#exit
 
 if ( ! -d $outputpath ) then
    mkdir -p $outputpath
@@ -144,7 +137,7 @@ if ($ilamb_fields == 1) then
   set fldlist_monthly = (ALT AR BTRAN CH4PROD DENIT EFLX_LH_TOT ELAI ER ESAI FAREA_BURNED \
     FCEV FCH4 FCH4TOCO2 FCOV FCTR FGEV FGR FGR12 FH2OSFC FINUNDATED FIRA FIRE FLDS FPG FPI \
     FPSN FROST_TABLE FSA FSAT FSDS FSH FSM FSNO FSR F_DENIT F_NIT GPP \
-    GROSS_NMIN H2OSFC H2OSNO HR HTOP LAND_USE_FLUX LEAFC WOODC FROOTC NDEP_TO_SMINN NBP NEE NEP \
+    GROSS_NMIN H2OSFC H2OSNO HR HTOP LAND_USE_FLUX LEAFC FROOTC NDEP_TO_SMINN NBP NEE NEP \
     NET_NMIN NFIX_TO_SMINN NPP Q2M QCHARGE QDRAI QOVER QRUNOFF QRGWL QSNOMELT \
     QSOIL QVEGE QVEGT RAIN RH2M SMIN_NO3 SMIN_NH4 SNOW SNOWDP SNOWICE SNOWLIQ SNOW_DEPTH \
     SNOW_SINKS SNOW_SOURCES SOMHR TG TSA TSAI TLAI TV QBOT TBOT \
@@ -162,15 +155,13 @@ if ($ilamb_fields == 1) then
 
 else
   set fldlist_monthly = (ALT FCH4 FAREA_BURNED EFLX_LH_TOT FH2OSFC LAND_USE_FLUX H2OSOI NBP NEE \
-    NPP Q2M RAIN SNOW SNOWDP SNOW_DEPTH TWS VOLR ZWT TSA RH2M ORUNOFF QOVER QDRAI FSNO TSOI \
+    NPP Q2M RAIN SNOW SNOWDP SNOW_DEPTH TWS VOLR ZWT TSA RH2M QRUNOFF QOVER QDRAI FSNO TSOI \
     TLAI TSAI ELAI ESAI FSH FSDS FSA FIRE FIRA LEAFC TOTSOMC TOTSOMC_1m TOTVEGC TOTECOSYSC \
-    TLAKE CWDC COL_FIRE_CLOSS)
+    TLAKE CWDC COL_FIRE_CLOSS WOOD_HARVESTC GPP ER NEP QSOIL QVEGE QVEGT QRGWL QSNOMELT)
 
-  set fldlist_monthly = (WOOD_HARVESTC)
+  #set fldlist_monthly = (WOOD_HARVESTC)
   set fldlist_annual = ( )
 endif
-
-
 
 
 #mxu
@@ -178,61 +169,41 @@ endif
 #
 foreach cent ($centuries)
 
-   #mxu add the fixed fields output 
-   echo $cent
-   if ($add_fixed_flds == 1) then
-      foreach fil ($caseidpath/$caseid.clm2.h0.${cent}??-*)
-          echo $fil
-
-          set funits = `ncks -C -u -v area $fil |grep -i units|grep -o '".*"'|sed 's/"//g'` 
-
-          if ($funits == "km^2") then
-              ncap2 -O -h -4 -v -s 'areacella=udunits(area,"m2");' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          else if ($funits == "steradian")
-              ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"  
-          endif
-
-          ncatted -h -a units,areacella,o,c,'m2' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          #-ncks -h -4 -cv area $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          #-ncrename -h -v area,areacella areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-
-          ncatted -h -a standard_name,areacella,o,c,'cell_area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a original_name,areacella,o,c,'area' areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a _FillValue,areacella,o,f,1.e20 areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a missing_value,areacella,o,f,1.e20 areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-      
-          ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' $fil sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc" 
-          #-ncks -h -4 -cv landfrac $fil sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          #-ncrename -h -v landfrac,sftlf sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a _FillValue,sftlf,o,f,1.e20 sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a missing_value,sftlf,o,f,1.e20 sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          ncatted -h -a units,sftlf,o,c,'%' sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          
-          break
-      end
-      
-      echo 'finished generating the fixed fields, areacella and sftlf'
-      exit
-   endif
-
    @ i = 0
    foreach fld ($fldlist_monthly)
        echo $fld
        @ i = $i + 1
        if ( $i % $nconcurrent == 0 ) then
-           if ( $cent == "19" ) then
-   	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-* $caseid.$fld.monthly.$cent.nc
+           if ( $cent == "18" ) then 
+               if ( $fld == "NBP" || $fld == "NEE" ) then 
+                   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
+               endif
+           else if ( $cent == "19" ) then
+              if ( $fld == "NBP" || $fld == "NEE" ) then
+                ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
+              else if ( $fld == "TSA" || $fld == "RH2M" || $fld == "RAIN" || $fld == "SNOW" ) then
+   	        ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[56789]?-* $caseid.$fld.monthly.$cent.nc
+              else
+   	        ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-* $caseid.$fld.monthly.$cent.nc
+              endif
            else
-   	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
+              ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
            endif
        else
-           if ( $cent == "19" ) then
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-* $caseid.$fld.monthly.$cent.nc &
+           if ( $cent == "18" ) then
+               if ( $fld == "NBP" || $fld == "NEE" ) then
+                   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc &
+               endif
+           else if ( $cent == "19" ) then
+              if ( $fld == "NBP" || $fld == "NEE" ) then
+                ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc &
+              else if ( $fld == "TSA" || $fld == "RH2M" || $fld == "RAIN" || $fld == "SNOW" ) then
+                ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[56789]?-* $caseid.$fld.monthly.$cent.nc &
+              else
+                ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-* $caseid.$fld.monthly.$cent.nc &
+              endif
            else
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-* $caseid.$fld.monthly.$cent.nc &
+              ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}??-* $caseid.$fld.monthly.$cent.nc
            endif
        endif
    end
@@ -242,19 +213,20 @@ foreach cent ($centuries)
        echo $fld
        @ i = $i + 1
        if ( $i % $nconcurrent == 0 ) then
-           if ( $cent == "19" ) then
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-12.nc $caseid.$fld.annual.$cent.nc
-           else
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-12.nc $caseid.$fld.annual.$cent.nc
-           endif
+           #if ( $cent == "19" ) then
+	   #   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-12.nc $caseid.$fld.annual.$cent.nc
+           #else
+	   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-12.nc $caseid.$fld.annual.$cent.nc
+           #endif
        else
-           if ( $cent == "19" ) then
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-12.nc $caseid.$fld.annual.$cent.nc &
-           else
-	      ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-12.nc $caseid.$fld.annual.$cent.nc &
-           endif
+           #if ( $cent == "19" ) then
+	   #   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.${cent}[89]?-12.nc $caseid.$fld.annual.$cent.nc &
+           #else
+	   ncrcat -O -cv $fld $caseidpath/$caseid.clm2.h0.$cent??-12.nc $caseid.$fld.annual.$cent.nc &
+           #endif
        endif
    end
+
    wait
 
 # Compress files to netcdf4 format if requested
@@ -264,9 +236,21 @@ foreach cent ($centuries)
          echo compress $fld
          @ i = $i + 1
          if ( $i % $nconcurrent == 0 ) then
-            ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc
-         else 
-            ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc &
+            if ( $cent == "18" ) then
+              if ( $fld == "NBP" ) then 
+                ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc
+              endif
+            else
+              ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc
+            endif
+         else
+           if ( $cent == "18" ) then
+              if ( $fld == "NBP" ) then
+                ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc &
+              endif
+            else
+              ncks -4 -L 1 $caseid.$fld.monthly.$cent.nc $caseid.$fld.monthly.$cent.compress.nc &
+            endif 
          endif
       end
 
@@ -306,7 +290,7 @@ foreach fld ($fldlist_monthly)
    else 
       ncrcat -O $caseid.$fld.monthly.*.nc $caseid.$fld.monthly.$year_range.nc &
    endif
-   wait
+#   wait
 end
 
 wait
@@ -341,8 +325,8 @@ if ($convert_to_cmip == 1) then
    #/bin/cp -f /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/alm2lamb_wkflow/clm_to_mip $outputpath/$caseid/
    /bin/cp -f $SrcDir/clm_to_mip $outputpath/$caseid/
    cd $outputpath/$caseid/
-   echo ./clm_to_mip ${model} ${experiment} ${year_range}
-   ./clm_to_mip ${model} ${experiment} ${year_range}
+   echo clm_to_mip ${model} ${experiment} ${year_range}
+   clm_to_mip ${model} ${experiment} ${year_range}
 endif
 
 #setenv email_address  ${LOGNAME}@ucar.edu
