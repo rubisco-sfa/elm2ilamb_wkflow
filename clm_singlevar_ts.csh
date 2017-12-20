@@ -18,6 +18,7 @@ set ilamb_fields = 0        # define varaible list for ILAMB
 set compress = 1            # 1 - compress; 0 - noncompress
 set convert_to_cmip = 0     # 0 - group monthly files to century files; 1 - further convert them following the cmip convention 
 set nconcurrent  = 6        # number of concurrent processes to run, more = faster
+set add_fixed_flds = 0      # default, the fx fields won't be generated
 
 
 
