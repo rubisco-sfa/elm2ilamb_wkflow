@@ -65,12 +65,12 @@ while (1)
 		breaksw
 	case -i:
         case --caseidpath:
-                set caseidpath = $2
+                set caseidpath = `readlink -f $2`
 		echo "The directory of the case results: "\`$2:q\' ; shift ; shift
 		breaksw
 	case -o:
         case --outputpath:
-                set outputpath = $2
+                set outputpath = `readlink -f $2`
 		echo "The output directory: "\`$2:q\' ; shift ; shift
 		breaksw
 
@@ -125,7 +125,7 @@ while ($#argv > 0)
 end
 
 
-if ( `where clm_to_mip` == "" && $convert_to_cmip == 1) then
+if (! -f clm_to_mip && $convert_to_cmip == 1) then
    echo "clm_to_mip is needed for converting model outputs following cmip conventions" 
 endif
 
@@ -376,7 +376,7 @@ if ($convert_to_cmip == 1) then
    /bin/cp -f $SrcDir/clm_to_mip $outputpath/$caseid/
    cd $outputpath/$caseid/
    echo clm_to_mip ${model} ${experiment} ${year_range}
-   clm_to_mip ${model} ${experiment} ${year_range}
+   ./clm_to_mip ${model} ${experiment} ${year_range}
 endif
 
 #setenv email_address  ${LOGNAME}@ucar.edu
