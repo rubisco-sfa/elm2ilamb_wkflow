@@ -20,7 +20,7 @@ Just running "clm_singlevar_ts.csh" without any command line arguments will show
 ```
 > ./clm_singlevar_ts.csh
 clm_singlevar_ts.csh --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] 
-                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb]
+                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]
 ```
 
 For example, if you ran a case of ACME water cycle historical experiment from 1850-2050, the case name is
@@ -29,8 +29,17 @@ in the directory */lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/ILAMB/ALM_WCYC
 following CMIP conventions into the directory */lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/* for analysis in ILAMB. 
 Then try to run the command as follows:
 
+
+- Step 1, output the fixed datasets of "sftlf" and "areacella" using "--addfxflds": 
+
+```
+clm_singlevar_ts.csh --caseid interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 --centuries 18,19,20 -y 1850-2050 
+          -i interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 -o /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/ 
+	  --experiment history --model ALM_CYCLE --numcc 6 --cmip --ilamb --addfxflds
 ```
 
+- Step 2, output all other variables:
+```
 clm_singlevar_ts.csh --caseid interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 --centuries 18,19,20 -y 1850-2050 
           -i interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 -o /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/ 
 	  --experiment history --model ALM_CYCLE --numcc 6 --cmip --ilamb
@@ -48,9 +57,5 @@ clm_singlevar_ts.csh --caseid interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6
 * --numcc : number of concurrent processes
 * --cmip  : rewrite model simulations following CMIP conventions
 * --ilmab : rewrite model variables following CMIP conventions for analysis in ILAMB
-
-
-
-
-
+* --addfxflds : only rewrite the two fixed datasets "sftlf" and "areacella" and exit. Default they won't be written out
 
