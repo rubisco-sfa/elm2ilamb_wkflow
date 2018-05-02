@@ -7,7 +7,7 @@
 # Required software: NCO toolkit 
 
 # Min Xu: 2017-04-28: add command line arguments and clean codes
-
+# ATTN: the working directory is the output directory
 set verbose
 
 set ilamb_fields = 0        # define varaible list for ILAMB
