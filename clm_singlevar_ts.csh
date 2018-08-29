@@ -22,6 +22,11 @@ set add_fixed_flds = 0      # default, the fx fields won't be generated
 
 set SrcDir = `pwd`
 
+set CmdDir = `which clm_to_mip`
+
+if (! -z "$CmdDir") then
+   set SrcDir = `dirname $CmdDir`
+endif                        
 
 alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"'
 
@@ -185,11 +190,14 @@ foreach cent ($centuries)
       foreach fil ($caseidpath/$caseid.clm2.h0.${cent}??-*)
           echo $fil
 
-          set funits = `ncks -C -u -v area $fil |grep -i units|grep -o '".*"'|sed 's/"//g'` 
+          #-set funits = `ncks -C -u -v area $fil |grep -i units|grep -o '".*"'|sed 's/"//g'` 
+          set funits = `ncks -M -m $fil |grep -E -i "^area attribute [0-9]+: units" |cut -f 11- -d ' '` 
+
+          echo $funits
 
           if ($funits == "km^2") then
               ncap2 -O -h -4 -v -s 'areacella=udunits(area,"m2");' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-          else if ($funits == "steradian")
+          else if ($funits == "steradian") then
               ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' $fil areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"  
           endif
 
