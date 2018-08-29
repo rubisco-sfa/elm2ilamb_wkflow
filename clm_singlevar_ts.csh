@@ -10,7 +10,7 @@
 # Min Xu: 2017-12-27: add the --addfxflds to generate the fixed fields "areacella and sftlf"
 # ATTN: the working directory is the output directory
 
-set verbose
+#-set verbose
 
 set ilamb_fields = 0        # define varaible list for ILAMB
 set compress = 1            # 1 - compress; 0 - noncompress
@@ -28,11 +28,10 @@ if (! -z "$CmdDir") then
    set SrcDir = `dirname $CmdDir`
 endif                        
 
-alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"'
+alias printusage 'echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \n --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] -v"'
 
 if ($#argv == 0) then
-   echo "`basename $0` --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] \
-                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]"
+   printusage
    exit 1
 endif
 
@@ -41,7 +40,7 @@ endif
 
 
 set longargs = ilamb,cmip,addfxflds,caseid:,centuries:,year_range:,caseidpath:,outputpath:,experiment:,model:,numcc: 
-set shrtargs = c:T:y:i:o:e:m:
+set shrtargs = hvc:T:y:i:o:e:m:
 set CmdLine=(`getopt -s tcsh  -o  $shrtargs --long $longargs -- $argv:q`)
 
 if ($? != 0) then 
@@ -53,6 +52,13 @@ eval set argv=\($CmdLine:q\)
 
 while (1)
 	switch($1:q)
+        case -h:
+                printusage
+                exit 1
+		breaksw
+        case -v:
+                set verbose; shift;
+		breaksw
 	case -c:
         case --caseid:
                 set caseid = $2
