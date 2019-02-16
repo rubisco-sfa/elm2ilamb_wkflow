@@ -107,6 +107,10 @@ else
    TIMESAMP=$3
 fi
 
+#debug
+
+set -x
+
 
 #
 # Set up ncap2 on yellowstone
