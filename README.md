@@ -20,7 +20,7 @@ Just running "clm_singlevar_ts.csh" without any command line arguments will show
 ```
 > ./clm_singlevar_ts.csh
 clm_singlevar_ts.csh --caseid[-c] --centuries[-T] --year_range[-y] --caseidpath[-i] --outputpath[-o] 
-                       --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds]
+                       --experiment[-e] --model[-m] --srcgrid[-s] --dstgrid[-g] --numcc [--cmip] [--ilamb] [--addfxflds]
 ```
 
 For example, if you ran a case of ACME water cycle historical experiment from 1850-2050, the case name is
@@ -43,6 +43,15 @@ clm_singlevar_ts.csh --caseid interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6
 clm_singlevar_ts.csh --caseid interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 --centuries 18,19,20 -y 1850-2050 
           -i interp_20160520.A_WCYCL1850.ne30_oEC.edison.alpha6_01 -o /lustre/atlas1/cli106/proj-shared/mxu/ALM_ILAMB/RESULT/ 
 	  --experiment history --model ALM_CYCLE --numcc 6 --cmip --ilamb
+```
+
+
+### Examples:
+
+```
+./clm_singlevar_ts.bash --caseid F_acmev03_enso_ne30_knl_cesmmach_co2cyc_pmpet_25yr_climpac --centuries 19,20 --year_range 1980-2016 \
+--caseidpath /global/cscratch1/sd/minxu/archive/F_acmev03_enso_ne30_knl_cesmmach_co2cyc_pmpet_25yr_climpac/lnd/hist \
+-o ./test -e enso --cmip --ilamb -y 1996-2016 -a 574
 ```
 
 ### Options:
