@@ -20,6 +20,7 @@ use_cremap3=0
 use_ncclimo=0
 use_pyreshaper=0
 skip_genmap=0
+no_gen_ts=0
 
 Script=`readlink -f $0`
 SrcDir=`dirname $Script`
@@ -43,7 +44,7 @@ print_usage () {
 
    CmdNam=`basename $0`
    echo "Usage: $CmdNam --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
-                 --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v 
+                 --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
                  --skip_genmap --ncclimo|--pyreshaper --ncremap|--cremap3"
 
    echo ""
@@ -56,6 +57,7 @@ print_usage () {
                                   between first_year+align_year to last_year+align_year" are processed
    echo "         --year_align, -a       : the year used to align the model year and real years set in the --year_range, it equals
                                   model year minus real year"
+   echo "         --no-gen-ts            : switch of not generating ts (i.e. they were generated before)"
    echo "         --skip_genmap          : 0 mean not skip map generation, positive integer number is to skip and use mapXXXX.nc"
    echo "         --srcgrid, -s          : if do remapping, source grid description in the SCRIP format is required"
    echo "         --dstgrid, -g          : if do remapping, target grid description in the SCRIP format is required"
@@ -76,7 +78,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,ncclimo,pyreshaper,ncremap,cremap3,skip_genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:
+     longargs=ilamb,cmip,addfxflds,ncclimo,pyreshaper,ncremap,cremap3,no-gen-ts,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -129,9 +131,11 @@ parse_options () {
              --numcc)
                      nconcurrent=$2
      		echo "Number of concurrent processes: $2"; shift 2 ;;
-             --skip_genmap)
+             --skip-genmap)
                      skip_genmap=$2
      		echo "skip_genmap: $2"; shift 2 ;;
+             --no-gen-ts)
+                     no_gen_ts=1; shift ;;
              --ilamb)
                      ilamb_fields=1; shift ;;
              --cmip)
@@ -250,10 +254,13 @@ else
 fi
 
 # time-serialization
-if [[ $use_ncclimo == 1 ]]; then
-   source $SrcDir/tool/run_gen_ts.bash
-else
-   source $SrcDir/tool/run_reshaper.bash
+
+if [[ $no_gen_ts == 0 ]]; then
+   if [[ $use_ncclimo == 1 ]]; then
+      source $SrcDir/tool/run_gen_ts.bash
+   else
+      source $SrcDir/tool/run_reshaper.bash
+   fi
 fi
 
 # remapping
