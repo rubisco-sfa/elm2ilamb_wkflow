@@ -9,6 +9,7 @@
 
 
 # defaults:
+set -x 
 
 ilamb_fields=0        # define varaible list for ILAMB
 convert_to_cmip=0     # 0 - not cmorize outputs; 1 - cmorize outputs 
@@ -196,7 +197,7 @@ cd cmordir
 for cf in *.nc; do
    echo $cf
    /bin/rm -f cmortmp.nc
-   ncap2 -s "time_bounds=time_bounds-$(($difyear*365)); time=time_bounds(:,1);" $cf cmortmp.nc
+   ncap2 -s "time_bounds=time_bounds+$(($difyear*(-365))); time=time_bounds(:,1);" $cf cmortmp.nc
    /bin/mv -f cmortmp.nc $cf
 done
 }
@@ -281,7 +282,6 @@ else
    echo "No remapping and cmorized variables directly"
 fi
 
-exit
 # cmorization (converting to CMIP format)
 if [[ $convert_to_cmip == 1 ]]; then
    /bin/cp -f $SrcDir/tool/clm_to_mip $outputpath/$caseid/rgr
