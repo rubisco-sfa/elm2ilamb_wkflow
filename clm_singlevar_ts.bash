@@ -199,7 +199,7 @@ time_shift (){
 difyear=$1
 cmordir=$2
 
-cd cmordir
+cd $cmordir
 for cf in *.nc; do
    echo $cf
    /bin/rm -f cmortmp.nc
@@ -240,6 +240,9 @@ drc_tmp=${DATA}/tmp # Temporary/intermediate-file directory
 drc_map=${DATA}/map # Map directory
 drc_log=${DATA}/log # Log directory
 
+drc_cmor=${drc_rgr}/CMOR
+
+
 if [[ ! -d $drc_out ]]; then
    mkdir -p $drc_out
 fi
@@ -254,6 +257,9 @@ if [[ ! -d $drc_map ]]; then
 fi
 if [[ ! -d $drc_log ]]; then
    mkdir -p $drc_log
+fi
+if [[ ! -d $drc_cmor ]]; then
+   mkdir -p $drc_cmor
 fi
 
 cd $outputpath/$caseid
@@ -323,23 +329,24 @@ if [[ $add_fixed_flds == 1 ]]; then
    ncatted -h -a ,global,d,,     ${drc_rgr}/sftlf.nc
 
    #area
-   ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' ${drc_rgr}/areacella.nc ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a units,areacella,o,c,'m2' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a standard_name,areacella,o,c,'cell_area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a original_name,areacella,o,c,'area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a _FillValue,areacella,o,f,1.e20 ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a missing_value,areacella,o,f,1.e20 ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' ${drc_rgr}/areacella.nc ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a units,areacella,o,c,'m2' ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,areacella,o,c,'cell_area' ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a original_name,areacella,o,c,'area' ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a _FillValue,areacella,o,f,1.e20 ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a missing_value,areacella,o,f,1.e20 ${drc_cmor}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
 
    /bin/rm -f  ${drc_rgr}/areacella.nc
 
-   ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' ${drc_rgr}/sftlf.nc ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a _FillValue,sftlf,o,f,1.e20 ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a missing_value,sftlf,o,f,1.e20 ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a units,sftlf,o,c,'%' ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' ${drc_rgr}/sftlf.nc ${drc_cmor}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' ${drc_cmor}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a _FillValue,sftlf,o,f,1.e20 ${drc_cmor}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a missing_value,sftlf,o,f,1.e20 ${drc_cmor}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a units,sftlf,o,c,'%' ${drc_cmor}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    /bin/rm -f  ${drc_rgr}/sftlf.nc 
+   /bin/rm -f  ${drc_rgr}/area.nc 
 fi
 
 exit
@@ -385,14 +392,17 @@ if [[ $convert_to_cmip == 1 ]]; then
    if [[ $use_ncclimo == 1 ]]; then
       # change var_YYYY01_YYYY12.nc to ncclimo.var.YYYY01_YYYY12.nc
       rename _${stryear} .${stryear} *${stryear}*.nc
-      for rgrf in *.nc; do
+      for rgrf in *${stryear}*.nc; do
           /bin/mv $rgrf ncclimo.$rgrf
       done
    fi
 
    ./clm_to_mip ${model} ${experiment} ${year_range}
-   cd $outputpath/$caseid/rgr/CMOR
-   time_shift $year_align $outputpath/$caseid/rgr/CMOR
+
+   if [[ $year_align != 0 ]]; then
+      cd $outputpath/$caseid/rgr/CMOR
+      time_shift $year_align $outputpath/$caseid/rgr/CMOR
+   fi
 fi
 
 
