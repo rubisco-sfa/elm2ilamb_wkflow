@@ -9,7 +9,6 @@
 
 
 # defaults:
-set -x 
 
 ilamb_fields=0        # define varaible list for ILAMB
 convert_to_cmip=0     # 0 - not cmorize outputs; 1 - cmorize outputs 
@@ -155,6 +154,13 @@ parse_options () {
              *) echo "Internal error!"; exit 1 ;;
          esac
      done
+
+
+     #
+     if [[ -z ${caseidpath+x} ]]; then
+         echo "please provide input data directory"
+         exit 1
+     fi
      
      #check ts options
 
@@ -181,7 +187,7 @@ parse_options () {
         skip_remap=0
      fi
      
-     if [[ $skip_remap == 0 && (-z ${src_grd+x} || -z ${dst_grd+x}) ]]; then
+     if [[ ($skip_remap == 0 || $add_fixed_flds == 1) && (-z ${src_grd+x} || -z ${dst_grd+x}) ]]; then
          echo "remapping needs the srcgrd and dstgrd"
          exit -1
      fi
@@ -224,7 +230,34 @@ if [[ ! -d $outputpath/$caseid ]]; then
    mkdir -p $outputpath/$caseid
 fi
 
+
+
+DATA=$outputpath/$caseid
+drc_inp=$caseidpath
+drc_out=${DATA}/org # Native grid output directory
+drc_rgr=${DATA}/rgr # Regridded output directory
+drc_tmp=${DATA}/tmp # Temporary/intermediate-file directory
+drc_map=${DATA}/map # Map directory
+drc_log=${DATA}/log # Log directory
+
+if [[ ! -d $drc_out ]]; then
+   mkdir -p $drc_out
+fi
+if [[ ! -d $drc_rgr ]]; then
+   mkdir -p $drc_rgr
+fi
+if [[ ! -d $drc_tmp ]]; then
+   mkdir -p $drc_tmp
+fi
+if [[ ! -d $drc_map ]]; then
+   mkdir -p $drc_map
+fi
+if [[ ! -d $drc_log ]]; then
+   mkdir -p $drc_log
+fi
+
 cd $outputpath/$caseid
+
 
 
 # improve it using JSON in future
@@ -254,8 +287,64 @@ else
    fldlist_annual=( )
 fi
 
-# time-serialization
 
+# fixed field first
+if [[ $add_fixed_flds == 1 ]]; then
+
+   use_mynco=1
+   if [[ $use_mynco == 1 ]]; then
+      export NCO_PATH_OVERRIDE=Yes
+      myncremap=$SrcDir/tool/ncremap
+   
+   else
+      myncremap=ncremap
+   fi
+   
+   echo "begin of remapping for fixed field"
+   firstyr=`printf "%04d" $((stryear+year_align))`
+   
+   echo "do mapping"
+   
+   ncks -O -v area,landfrac,TSA ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
+   $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${BASHPID}.nc --drc_out=${drc_rgr} \
+                             ${drc_tmp}/area.nc > ${drc_log}/ncremap.lnd 2>&1
+   if [[ $? != 0 ]]; then
+      echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"
+      exit
+   fi
+   mapid=$BASHPID
+   skip_genmap=0
+
+   ncks -v area ${drc_rgr}/area.nc  ${drc_rgr}/areacella.nc
+   ncks -v landfrac ${drc_rgr}/area.nc  ${drc_rgr}/sftlf.nc
+
+   #remove global attribute
+   ncatted -h -a ,global,d,, ${drc_rgr}/areacella.nc
+   ncatted -h -a ,global,d,,     ${drc_rgr}/sftlf.nc
+
+   #area
+   ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' ${drc_rgr}/areacella.nc ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a units,areacella,o,c,'m2' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,areacella,o,c,'cell_area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a original_name,areacella,o,c,'area' ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a _FillValue,areacella,o,f,1.e20 ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a missing_value,areacella,o,f,1.e20 ${drc_rgr}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+
+   /bin/rm -f  ${drc_rgr}/areacella.nc
+
+   ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' ${drc_rgr}/sftlf.nc ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a _FillValue,sftlf,o,f,1.e20 ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a missing_value,sftlf,o,f,1.e20 ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a units,sftlf,o,c,'%' ${drc_rgr}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   /bin/rm -f  ${drc_rgr}/sftlf.nc 
+fi
+
+exit
+
+# time-serialization
 if [[ $no_gen_ts == 0 ]]; then
    if [[ $use_ncclimo == 1 ]]; then
       source $SrcDir/tool/run_gen_ts.bash

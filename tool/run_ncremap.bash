@@ -96,6 +96,12 @@ for iseq in `seq 1 $numcc_remap`; do
     fi
 done
 
+#collect them waiting for them to end
+for pid in "${remap_pid[@]}"; do
+    echo $pid
+    wait $pid
+done
+
 # large files
 remap_pid=()
 date
