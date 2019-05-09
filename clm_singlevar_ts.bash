@@ -390,7 +390,7 @@ if [[ $convert_to_cmip == 1 ]]; then
 
    if [[ $use_ncclimo == 1 ]]; then
       # change var_YYYY01_YYYY12.nc to ncclimo.var.YYYY01_YYYY12.nc
-      rename _${stryear} .${stryear} *${stryear}*.nc
+      rename _${stryear} .monthly.${stryear} *${stryear}*.nc
       for rgrf in *${stryear}*.nc; do
           /bin/mv $rgrf ncclimo.$rgrf
       done
