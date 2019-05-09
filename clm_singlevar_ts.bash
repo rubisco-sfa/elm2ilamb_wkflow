@@ -78,7 +78,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,ncclimo,pyreshaper,ncremap,cremap3,no-gen-ts,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:
+     longargs=ilamb,cmip,addfxflds,ncclimo,pyreshaper,ncremap,cremap3,no-gen-ts,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -134,6 +134,9 @@ parse_options () {
              --skip-genmap)
                      skip_genmap=$2
      		echo "skip_genmap: $2"; shift 2 ;;
+             --morevars)
+                      more_vars=$2
+     		echo "more vars: $2"; shift 2 ;;
              --no-gen-ts)
                      no_gen_ts=1; shift ;;
              --ilamb)
@@ -286,13 +289,19 @@ if [[ $ilamb_fields == 1 ]]; then
     TOTLITN_1m TOTSOMC TOTSOMC_1m TOTSOMN_1m CWDC PBOT"
    fldlist_annual=( )
 else
-   fldlist_monthly="ALT FCH4 FAREA_BURNED EFLX_LH_TOT FH2OSFC LAND_USE_FLUX H2OSOI NBP NEE \
-    NPP Q2M RAIN SNOW SNOWDP SNOW_DEPTH TWS VOLR ZWT TSA RH2M QRUNOFF QOVER QDRAI FSNO TSOI \
-    TLAI TSAI ELAI ESAI FSH FSDS FSA FIRE FIRA LEAFC TOTSOMC TOTSOMC_1m TOTVEGC TOTECOSYSC \
-    TLAKE CWDC COL_FIRE_CLOSS WOOD_HARVESTC GPP ER NEP QSOIL QVEGE QVEGT QRGWL QSNOMELT"
+
+   fldlist_monthly="TREFMXAV TREFMNAV" 
+   #-fldlist_monthly="ALT FCH4 FAREA_BURNED EFLX_LH_TOT FH2OSFC LAND_USE_FLUX H2OSOI NBP NEE \
+   #- NPP Q2M RAIN SNOW SNOWDP SNOW_DEPTH TWS VOLR ZWT TSA RH2M QRUNOFF QOVER QDRAI FSNO TSOI \
+   #- TLAI TSAI ELAI ESAI FSH FSDS FSA FIRE FIRA LEAFC TOTSOMC TOTSOMC_1m TOTVEGC TOTECOSYSC \
+   #- TLAKE CWDC COL_FIRE_CLOSS WOOD_HARVESTC GPP ER NEP QSOIL QVEGE QVEGT QRGWL QSNOMELT"
    fldlist_annual=( )
 fi
 
+
+if [[ ! -z $more_vars ]]; then
+   fldlist_monthly="${more_vars} ${fldlist_monthly}"
+fi
 
 # fixed field first
 if [[ $add_fixed_flds == 1 ]]; then
