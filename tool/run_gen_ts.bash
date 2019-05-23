@@ -11,35 +11,33 @@
 
 cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specific options
 
-DATA=$outputpath/$caseid
-drc_inp=$caseidpath
-drc_out=${DATA}/org # Native grid output directory
-drc_rgr=${DATA}/rgr # Regridded output directory
-drc_tmp=${DATA}/tmp # Temporary/intermediate-file directory
-drc_map=${DATA}/map # Map directory
-drc_log=${DATA}/log # Log directory
+#-DATA=$outputpath/$caseid
+#-drc_inp=$caseidpath
+#-drc_out=${DATA}/org # Native grid output directory
+#-drc_rgr=${DATA}/rgr # Regridded output directory
+#-drc_tmp=${DATA}/tmp # Temporary/intermediate-file directory
+#-drc_map=${DATA}/map # Map directory
+#-drc_log=${DATA}/log # Log directory
+#-
+#-if [[ ! -d $drc_out ]]; then
+#-   mkdir -p $drc_out
+#-fi
+#-if [[ ! -d $drc_rgr ]]; then
+#-   mkdir -p $drc_rgr
+#-fi
+#-if [[ ! -d $drc_tmp ]]; then
+#-   mkdir -p $drc_tmp
+#-fi
+#-if [[ ! -d $drc_map ]]; then
+#-   mkdir -p $drc_map
+#-fi
+#-if [[ ! -d $drc_log ]]; then
+#-   mkdir -p $drc_log
+#-fi
 
 
 bgn_year=$stryear
 end_year=$endyear
-
-if [[ ! -d $drc_out ]]; then
-   mkdir -p $drc_out
-fi
-if [[ ! -d $drc_rgr ]]; then
-   mkdir -p $drc_rgr
-fi
-if [[ ! -d $drc_tmp ]]; then
-   mkdir -p $drc_tmp
-fi
-if [[ ! -d $drc_map ]]; then
-   mkdir -p $drc_map
-fi
-if [[ ! -d $drc_log ]]; then
-   mkdir -p $drc_log
-fi
-
-
 
 use_mynco=1
 
@@ -66,12 +64,14 @@ cd ${drc_inp}
 ncfiles=''
 for iy in `seq $((bgn_year+year_align)) $((end_year+year_align))`; do
     cy=`printf "%04d" $iy`
-    ncfiles="$ncfiles "`/bin/ls *clm2.h0.${cy}*.nc`
+    ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*.nc`
 done
 
-#-echo $ncfiles
+echo $vars
+`pwd`
 
 if [[ $nconcurrent == 0 ]]; then
+set -x 
    time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
         ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
 else

@@ -91,6 +91,9 @@ if [ -z "${DATA}" ]; then
     esac # !HOSTNAME
 fi # DATA
 
+#+mxu 
+OMP_PROC_BIND=false
+
 # Ensure batch jobs access correct 'mpirun' (or, with SLURM, 'srun') command, netCDF library, and NCO executables and library
 # 20170914 Entire block is identical between ncclimo and ncremap---keep it that way!
 # hrd_pth could be a command-line option to control environment if this block placed below getopt() block (not trivial)

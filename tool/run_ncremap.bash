@@ -47,8 +47,15 @@ firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
 if [[ x$skip_genmap == "x0" ]]; then
     echo "do mapping"
-    $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${BASHPID}.nc --drc_out=${drc_tmp} \
-                         ${drc_inp}/*.clm2.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
+
+    if [[ $comp == "lnd" ]]; then
+       $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.clm2.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
+
+    else
+       $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.cam.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
+    fi
     if [[ $? != 0 ]]; then
        echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"
        exit
@@ -60,7 +67,7 @@ fi
 
 #seperate files to two groups 
 smallfiles=(`cd ${drc_out} && find ./ -name '*.nc' -type f -size -1000000k`)
-largefiles=(`find ./ -name '*.nc' -type f -size +1000000k`)
+largefiles=(`cd ${drc_out} && find ./ -name '*.nc' -type f -size +1000000k`)
 
 
 echo "${#largefiles[@]}"
@@ -91,7 +98,7 @@ for iseq in `seq 1 $numcc_remap`; do
         break
     else
         export TMPDIR=${drc_tmp}
-        /bin/ls ${filelst[@]} | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+        /bin/ls ${filelst[@]} | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
         remap_pid+=($!)
     fi
 done
