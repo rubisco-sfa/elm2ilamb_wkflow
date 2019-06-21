@@ -20,7 +20,7 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-skip_genmap=651
 
 
-module load ncl
+module load ncl  # for esmf regridded
 
 cd ${drc_out}
 echo $DATA
@@ -66,14 +66,32 @@ else
 fi
 
 #seperate files to two groups 
-smallfiles=(`cd ${drc_out} && find ./ -name '*.nc' -type f -size -1000000k`)
-largefiles=(`cd ${drc_out} && find ./ -name '*.nc' -type f -size +1000000k`)
+smallfiles=()
+largefiles=()
 
+
+
+# the fldlist_monthly can have the ilamb varaible list or just the case name to remap the whole h0 output
+varlist=(${fldlist_monthly})
+
+for lvr in "${varlist[@]}"; do
+    echo $lvr
+    smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size -1000000k -follow`)
+    largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
+done
+
+
+#mxu temporialy fix
+#-largefiles=()
+#-smallfiles=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
 
 echo "${#largefiles[@]}"
 echo "${#smallfiles[@]}"
 
 numcc_remap=3
+if [[ ${#smallfiles[@]} -lt $numcc_remap ]]; then
+   numcc_remap=${#smallfiles[@]}
+fi
 
 # small files
 numsmallfls=${#smallfiles[@]}
