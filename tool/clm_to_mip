@@ -108,6 +108,8 @@ else
 fi
 
 
+function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d ' ' | uniq ; }
+
 #
 # Set up ncap2 on yellowstone
 #
@@ -531,8 +533,54 @@ for ICM5VAR in $SHORT_CLM_1 ; do
 #      MIPFILE=`echo $CLMFILE | sed -e "s/${CLMNAME}/${CM5NAME}/g"`
       MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
       echo ${CLMNAME}" converting to "${CM5NAME}
+
       $NCKS -O -x -v ${CLMNAME},levgrnd ${CLMFILE} .H.${CLMFILE}
-      ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} ${CLMFILE} A.nc
+#mxu add to avoid the memory issue
+
+      ntime=`ncdmnsz time ncclimo.TREFMNAV.monthly.185001_201412.nc`
+
+      hnum=1
+      if [ "$ntime" -gt "1200" ]; then
+         for it in `seq 0 500 $ntime`; do
+             if [ "$it" -eq "0" ]; then
+                 itb=$it
+             else
+                 ite=$((it-1))
+
+                 $NCKS -h -d time,$itb,$ite ${CLMFILE} .H${hnum}.${CLMFILE}
+                 ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} .H${hnum}.${CLMFILE} A${hnum}.nc
+
+                 hnum=$((hnum+1)) 
+                 itb=$it
+             fi
+         
+         done
+         
+         if [ "$itb" -lt "$ntime" ]; then
+            $NCKS -h -d time,$itb, ${CLMFILE} .H${hnum}.${CLMFILE}
+            ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} .H${hnum}.${CLMFILE} A${hnum}.nc
+         fi
+
+         ncrcat A?.nc -o A.nc
+         /bin/rm -f .H?.${CLMFILE} A?.nc 
+      else
+         ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} ${CLMFILE} A.nc
+      fi
+
+
+      #-$NCKS -h -d time,0,659 ${CLMFILE} .H1.${CLMFILE}
+      #-$NCKS -h -d time,660,1319 ${CLMFILE} .H2.${CLMFILE}
+      #-$NCKS -h -d time,1320, ${CLMFILE} .H3.${CLMFILE}
+
+      #-ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} .H1.${CLMFILE} A1.nc
+      #-ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} .H2.${CLMFILE} A2.nc
+      #-ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME} .H3.${CLMFILE} A3.nc
+      #-ncrcat A1.nc A2.nc A3.nc -o A.nc
+
+      #-/bin/rm -f .H1.${CLMFILE} A1.nc 
+      #-/bin/rm -f .H2.${CLMFILE} A2.nc 
+      #-/bin/rm -f .H3.${CLMFILE} A3.nc 
+      
       if [ $? -ne 0 ] ; then
         echo "Conversion of "${CLMNAME}" to "${CM5NAME}" failed."
       else
@@ -841,7 +889,7 @@ for ICM5VAR in $SHORT_CLM_2 ; do
       $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
       $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
       $NCKS -A A.nc B.nc
-      ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
+      ${NCAP2} --cnk_dmn time,1 -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
       if [ $? -ne 0 ] ; then
         echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
       else
