@@ -45,7 +45,15 @@ fi
 echo "begin of remapping"
 firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
-if [[ x$skip_genmap == "x0" ]]; then
+
+xskip_genmap=$skip_genmap
+
+if [[ $cmp == "atm" ]]; then
+   xskip_genmap= 0
+fi
+
+
+if [[ x$xskip_genmap == "x0" ]]; then
     echo "do mapping"
 
     if [[ $comp == "lnd" ]]; then

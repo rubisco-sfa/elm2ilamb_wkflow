@@ -362,7 +362,7 @@ if [[ $add_fixed_flds == 1 ]]; then
    echo "do mapping"
    
    ncks -O -v area,landfrac,TSA ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
-   $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${BASHPID}.nc --drc_out=${drc_rgr} \
+   $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_lnd_${BASHPID}.nc --drc_out=${drc_rgr} \
                              ${drc_tmp}/area.nc > ${drc_log}/ncremap.lnd 2>&1
    if [[ $? != 0 ]]; then
       echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"
