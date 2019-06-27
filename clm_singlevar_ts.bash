@@ -369,7 +369,7 @@ if [[ $add_fixed_flds == 1 ]]; then
       exit
    fi
    mapid=$BASHPID
-   skip_genmap=1
+   skip_genmap=$mapid
 
    ncks -v area ${drc_rgr}/area.nc  ${drc_rgr}/areacella.nc
    ncks -v landfrac ${drc_rgr}/area.nc  ${drc_rgr}/sftlf.nc
