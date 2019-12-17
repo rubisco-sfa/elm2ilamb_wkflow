@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -x
+#-set -x
 # This script is used to remap ne grid to regular grid and cannot be run as
 # a standalone mode since some variables are defined in the script that source
 # this script
@@ -20,7 +20,10 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-skip_genmap=651
 
 
-module load ncl  # for esmf regridded
+module load ncl/6.4.0  # for esmf regridded
+module load nco
+
+export NCO_PATH_OVERRIDE='No'
 
 cd ${drc_out}
 echo $DATA
@@ -35,7 +38,7 @@ alg_year=$year_align
 
 use_mynco=1
 if [[ $use_mynco == 1 ]]; then
-   export NCO_PATH_OVERRIDE=Yes
+   export NCO_PATH_OVERRIDE='No'
    myncremap=$SrcDir/tool/ncremap
 
 else

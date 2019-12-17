@@ -1,2 +1,4 @@
 t.sh
 test
+*.log
+*.Log

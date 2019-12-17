@@ -731,6 +731,9 @@ if [ "${d2f_flg}" != 'Yes' ]; then
     d2f_opt=''
 fi # !d2f_flg
 
+#mxu
+which ESMF_RegridWeightGen
+
 cmd_wgt_esmf=`command -v ${wgt_exe_esmf} --no_log 2> /dev/null`
 if [ "$?" -eq 0 ]; then
     # 20180830 Add --ignore_degenerate to default ERWG options for ESMF >= 7.1.0r
