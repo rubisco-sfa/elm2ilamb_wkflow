@@ -97,6 +97,9 @@
 #
 #######################################################################################################################################################
 #
+
+module load nco
+
 if [ $# -ne 3 ] ; then
    echo "Usage: clm_to_mip model experiment_name year_month_range"
    echo "Will convert/calculate as many MIP-like files as possible in the current directory"
@@ -108,6 +111,7 @@ else
 fi
 
 
+#define some functions
 function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d ' ' | uniq ; }
 
 #
@@ -464,7 +468,8 @@ for ICM5VAR in $SHORT_CLM_1 ; do
       MIPFILE=${CM5NAME}"_Lmon_"${MODEL}"_"${EXPERIMENT}"_r1i1p1_"${TIMESAMP}
       echo ${CLMNAME}" converting to "${CM5NAME}
       $NCKS -O -x -v ${CLMNAME} ${CLMFILE} .H.${CLMFILE}
-      NTIM=`ncdump -h $CLMFILE | egrep "time = " | cut -d"(" -f2 | cut -d" " -f1`
+      #-NTIM=`ncdump -h $CLMFILE | egrep "time = " | cut -d"(" -f2 | cut -d" " -f1`
+      NTIM=`ncdmnsz time  $CLMFILE`
       ITIM=1
       while [ $ITIM -le $NTIM ] ; do
         IVAL=$ITIM
