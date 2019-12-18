@@ -26,8 +26,12 @@ module load nco
 export NCO_PATH_OVERRIDE='No'
 
 cd ${drc_out}
-echo $DATA
-echo $drc_map
+
+
+if [[ $mydebug == 1 ]]; then
+  echo $DATA
+  echo $drc_map
+fi
 
 
 bgn_year=$stryear
@@ -45,7 +49,8 @@ else
    myncremap=ncremap
 fi
 
-echo "begin of remapping"
+echo "Begin remapping ..."
+
 firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
 
@@ -57,7 +62,7 @@ fi
 
 
 if [[ x$xskip_genmap == "x0" ]]; then
-    echo "do mapping"
+    echo "Generate remapping coefficients"
 
     if [[ $comp == "lnd" ]]; then
        $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
@@ -86,7 +91,7 @@ largefiles=()
 varlist=(${fldlist_monthly})
 
 for lvr in "${varlist[@]}"; do
-    echo $lvr
+    #-echo $lvr
     smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size -1000000k -follow`)
     largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
 done
@@ -96,10 +101,13 @@ done
 #-largefiles=()
 #-smallfiles=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
 
-echo "${#largefiles[@]}"
-echo "${#smallfiles[@]}"
+echo -e "No. of large file to remap: ${CR_GRN}${#largefiles[@]}${CR_NUL}"
+echo -e "No. of small file to remap: ${CR_GRN}${#smallfiles[@]}${CR_NUL}"
 
 numcc_remap=3
+
+echo -e "${FTBOLD}Attn: default no. of threads to be used in remapping is 3, it can be changed in run_ncremap.sh${FTNORM}"
+
 if [[ ${#smallfiles[@]} -lt $numcc_remap ]]; then
    numcc_remap=${#smallfiles[@]}
 fi
@@ -113,7 +121,7 @@ else
    nseq=$((numsmallfls/numcc_remap+1))
 fi
 
-echo $nseq
+#echo $nseq
 
 remap_pid=()
 for iseq in `seq 1 $numcc_remap`; do
@@ -122,7 +130,11 @@ for iseq in `seq 1 $numcc_remap`; do
     ie=$(($it>$numsmallfls?$numsmallfls:$it))
     iv=$((ie-is))   # not include ie
     filelst=("${smallfiles[@]:$is:$iv}")
-    echo ${filelst[*]}
+
+    if [[ $mydebug == 1 ]]; then
+       echo ${filelst[*]}
+    fi
+
     if [[ $iv -lt 0 ]]; then
         break
     else
@@ -134,13 +146,17 @@ done
 
 #collect them waiting for them to end
 for pid in "${remap_pid[@]}"; do
-    echo $pid
-    wait $pid
+
+    if  wait "$pid"; then
+        echo "thread $pid ended successfully"
+    else
+        echo "thread $pid ended with errors or earlier"
+    fi
 done
 
 # large files
 remap_pid=()
-date
+#-date
 for lf in "${largefiles[@]}"; do
     for im in `seq 0 11`; do
         echo $im $lf
@@ -149,7 +165,7 @@ for lf in "${largefiles[@]}"; do
     done
 
     for pid in "${remap_pid[@]}"; do
-        echo $pid
+        #-echo $pid
         wait $pid
     done
     bname=`basename $lf`
@@ -170,6 +186,6 @@ for lf in "${largefiles[@]}"; do
 done
 
 date >> logtime
-echo "end of remapping"
+echo "End of remapping"
 
 

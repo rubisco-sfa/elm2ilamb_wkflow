@@ -47,14 +47,16 @@ else
    myncclimo=ncclimo
 fi
 
-echo $DATA, $drc_map
 
-echo $fldlist_monthly
 vars="$(echo -e "${fldlist_monthly}" | sed -e 's/ \+/,/g' | sed -e 's/,$//')"
 nvrs="$(echo -e "$vars" | tr -cd , | wc -c)"; nvrs=$((nvrs+1))
 
-printf "%s\n%s" "Processing variables:" $vars
-echo "Total number of variables is: $nvrs"
+if [[ "$mydebug" == 1 ]]; then
+   echo $DATA, $drc_map
+   echo $fldlist_monthly
+   printf "%s\n%s" "Processing variables:" $vars
+fi
+echo -e "${CR_GRN}Total number of variables for time serialization is: $nvrs${CR_NUL}"
 
 export TMPDIR=${drc_tmp}
 
@@ -67,9 +69,13 @@ for iy in `seq $((bgn_year+year_align)) $((end_year+year_align))`; do
     ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*.nc`
 done
 
-echo $vars
-`pwd`
+if [[ "$mydebug" == 1 ]]; then
+   echo $vars
+   `pwd`
+fi
 
+
+echo "Time serialization stats:"
 if [[ $nconcurrent == 0 ]]; then
    time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
         ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
@@ -81,9 +87,9 @@ fi
 if [ "$?" != 0 ]; then
    echo "Error in the ncclimo, exiting .."
    exit;
-
 else
-   echo $DATA, $drc_map
+
+   if [[ $mydebug == 1 ]]; then
+      echo $DATA, $drc_map
+   fi
 fi
-
-
