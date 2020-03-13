@@ -542,7 +542,7 @@ for ICM5VAR in $SHORT_CLM_1 ; do
       $NCKS -O -x -v ${CLMNAME},levgrnd ${CLMFILE} .H.${CLMFILE}
 #mxu add to avoid the memory issue
 
-      ntime=`ncdmnsz time ncclimo.TREFMNAV.monthly.185001_201412.nc`
+      ntime=`ncdmnsz time ncclimo.TREFMNAV.monthly.${TIMESAMP}`
 
       hnum=1
       if [ "$ntime" -gt "1200" ]; then
@@ -848,10 +848,13 @@ for ICM5VAR in $SHORT_CLM_2 ; do
 #
     if [ $SUMLEVS -eq 1 ] ; then
       $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
+
+      #+mxu will fix later or just use the new python too
       ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME1} ${CLMFILE1} A.nc
       ncwa -O -y ttl -F -a levgrnd -v ${CLMNAME2} ${CLMFILE2} B.nc
       $NCKS -A A.nc B.nc
       ${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc C.nc
+      #-
       if [ $? -ne 0 ] ; then
         echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
       else
@@ -891,10 +894,11 @@ for ICM5VAR in $SHORT_CLM_2 ; do
 #
     if [ $UNALTER -eq 1 ] ; then
       $NCKS -O -x -v ${CLMNAME1} ${CLMFILE1} .H.${CLMFILE1}
-      $NCKS -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
-      $NCKS -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
-      $NCKS -A A.nc B.nc
-      ${NCAP2} --cnk_dmn time,1 -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
+      $NCKS -4 -O -v    ${CLMNAME1} ${CLMFILE1} A.nc
+      $NCKS -4 -O -v    ${CLMNAME2} ${CLMFILE2} B.nc
+      $NCKS -4 -A A.nc B.nc
+      ${NCAP2} -3 --cnk_dmn time,1 -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
+      #-${NCAP2} -v -O -s "${CM5NAME}=${CLMNAME1}+${CLMNAME2}" B.nc ${MIPFILE}
       if [ $? -ne 0 ] ; then
         echo "Conversion of "${CLMNAME1}" and "${CLMNAME2}" to "${CM5NAME}" failed."
       else
