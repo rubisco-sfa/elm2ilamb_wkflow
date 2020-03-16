@@ -385,8 +385,10 @@ if [[ $ilamb_fields == 1 ]]; then
 else
 
    #fldlist_lmon="TREFMXAV TREFMNAV" 
-   fldlist_lmon="NEE"
+   #fldlist_lmon="NEE"
    #fldlist_lmon="WT" 
+
+   fldlist_amon="PRECSC PRECSL TREFHT TREFHTMN TREFHTMX RHREFHT SHFLX LHFLX QFLX PRECC PRECL FLDS FLNS FSDS FSNS SFCO2 SFCO2_LND SFCO2_OCN SFCO2_FFF"
 
    #all h0 files
    #fldlist_lmon=$caseid

@@ -36,15 +36,16 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-fi
 
 
-bgn_year=$stryear
-end_year=$endyear
+#force to decimal
+bgn_year=$((10#$stryear))
+end_year=$((10#$endyear))
 
 use_mynco=1
 
 if [[ $use_mynco == 1 ]]; then
    myncclimo=$SrcDir/tool/ncclimo
 else
-   myncclimo=ncclimo
+   myncclimo=/global/u1/z/zender/bin_cori/ncclimo
 fi
 
 
@@ -76,11 +77,13 @@ fi
 
 
 echo "Time serialization stats:"
+
+export HDF5_USE_FILE_LOCKING=FALSE
 if [[ $nconcurrent == 0 ]]; then
-   time /bin/ls $ncfiles | $myncclimo -3 --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+   time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
         ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
 else
-   time /bin/ls $ncfiles | $myncclimo -3 --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+   time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
         ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
 fi
 
