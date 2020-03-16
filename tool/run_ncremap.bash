@@ -23,6 +23,10 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 module load ncl/6.4.0  # for esmf regridded
 module load nco
 
+
+# ncdmnsz $dmn_nm $fl_nm : What is dimension size?
+function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d ' ' | uniq ; }
+
 export NCO_PATH_OVERRIDE='No'
 
 cd ${drc_out}
@@ -92,14 +96,15 @@ varlist=(${fldlist_monthly})
 
 for lvr in "${varlist[@]}"; do
     #-echo $lvr
-    smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size -1000000k -follow`)
-    largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
+    smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}_??????_??????.nc" -type f -size -1000000k -follow`)
+    largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}_??????_??????.nc" -type f -size +1000000k -follow`)
 done
 
 
 #mxu temporialy fix
 #-largefiles=()
 #-smallfiles=(`cd ${drc_out} && find ./ -name "${lvr}*.nc" -type f -size +1000000k -follow`)
+#-smallfiles=()
 
 echo -e "No. of large file to remap: ${CR_GRN}${#largefiles[@]}${CR_NUL}"
 echo -e "No. of small file to remap: ${CR_GRN}${#smallfiles[@]}${CR_NUL}"
@@ -115,53 +120,80 @@ fi
 # small files
 numsmallfls=${#smallfiles[@]}
 #
-if [[ $((numsmallfls % numcc_remap)) == 0 ]]; then
-   nseq=$((numsmallfls/numcc_remap+0))
-else
-   nseq=$((numsmallfls/numcc_remap+1))
+
+
+if [[ $numsmallfls -gt 0 ]]; then
+   if [[ $((numsmallfls % numcc_remap)) == 0 ]]; then
+      nseq=$((numsmallfls/numcc_remap+0))
+   else
+      nseq=$((numsmallfls/numcc_remap+1))
+   fi
+   
+   #echo $nseq
+   
+   
+   remap_pid=()
+   for iseq in `seq 1 $numcc_remap`; do
+       is=$((iseq*nseq-nseq))
+       it=$((is+nseq))
+       ie=$(($it>$numsmallfls?$numsmallfls:$it))
+       iv=$((ie-is))   # not include ie
+       filelst=("${smallfiles[@]:$is:$iv}")
+   
+       if [[ $mydebug == 1 ]]; then
+          echo ${filelst[*]}
+       fi
+   
+       if [[ $iv -lt 0 ]]; then
+           break
+       else
+           export TMPDIR=${drc_tmp}
+           /bin/ls ${filelst[@]} | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+           remap_pid+=($!)
+       fi
+   done
+   
+   #collect them waiting for them to end
+   for pid in "${remap_pid[@]}"; do
+   
+       if  wait "$pid"; then
+           echo "thread $pid ended successfully"
+       else
+           echo "thread $pid ended with errors or earlier"
+       fi
+   done
 fi
 
-#echo $nseq
-
-remap_pid=()
-for iseq in `seq 1 $numcc_remap`; do
-    is=$((iseq*nseq-nseq))
-    it=$((is+nseq))
-    ie=$(($it>$numsmallfls?$numsmallfls:$it))
-    iv=$((ie-is))   # not include ie
-    filelst=("${smallfiles[@]:$is:$iv}")
-
-    if [[ $mydebug == 1 ]]; then
-       echo ${filelst[*]}
-    fi
-
-    if [[ $iv -lt 0 ]]; then
-        break
-    else
-        export TMPDIR=${drc_tmp}
-        /bin/ls ${filelst[@]} | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
-        remap_pid+=($!)
-    fi
-done
-
-#collect them waiting for them to end
-for pid in "${remap_pid[@]}"; do
-
-    if  wait "$pid"; then
-        echo "thread $pid ended successfully"
-    else
-        echo "thread $pid ended with errors or earlier"
-    fi
-done
-
 # large files
-remap_pid=()
 #-date
 for lf in "${largefiles[@]}"; do
-    for im in `seq 0 11`; do
-        echo $im $lf
-        ncks -h -d time,$im,,12 $lf ${drc_tmp}/tmp$im.nc &
-        remap_pid+=($!)
+    remap_pid=()
+    ntimes=`ncdmnsz time $lf`
+
+    if [[ $ntimes -gt 10 ]]; then
+        nsects=$((ntimes/10+1))
+    else
+	nsects=1
+    fi
+
+    totjob=-1
+    for im in `seq 0 9`; do
+	
+	ib=$((im*nsects))
+	ie=$((im*nsects+nsects-1))
+
+
+	if [[ $ib -gt $((ntimes-1)) ]]; then
+           break
+	else
+           totjob=$((totjob+1))
+           if [[ $ie -gt $((ntimes-1)) ]]; then
+	      ie=$((ntimes-1))
+	   fi
+           echo $im $lf $ntimes $nsects $ib $ie $totjob
+           ncks -h -d time,$ib,$ie,1 $lf ${drc_tmp}/tmp$im.nc &
+           remap_pid+=($!)
+	fi
     done
 
     for pid in "${remap_pid[@]}"; do
@@ -171,10 +203,18 @@ for lf in "${largefiles[@]}"; do
     bname=`basename $lf`
 
     date
-    /bin/ls ${drc_tmp}/tmp[0-3].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
-    /bin/ls ${drc_tmp}/tmp[4-6].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
-    /bin/ls ${drc_tmp}/tmp[7-9].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
-    /bin/ls ${drc_tmp}/tmp1[0-1].nc | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+
+    if [[ $totjob -le 3 ]]; then
+       /bin/ls ${drc_tmp}/tmp[0-$totjob].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+    else
+       /bin/ls ${drc_tmp}/tmp[0-3].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+       if [[ $totjob -le 6 ]]; then
+          /bin/ls ${drc_tmp}/tmp[4-$totjob].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+       else
+          /bin/ls ${drc_tmp}/tmp[4-6].nc        | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+          /bin/ls ${drc_tmp}/tmp[7-$totjob].nc  | $myncremap -a aave ${cmip6_opt} -m ${drc_map}/map_${comp}_${mapid}.nc --drc_out=${drc_rgr} >> ${drc_log}/ncremap.lnd 2>&1 &
+       fi
+    fi
     wait
 
     date
