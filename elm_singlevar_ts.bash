@@ -21,6 +21,7 @@ cleanup() {
 
 trap cleanup ERR
 
+function nctypget { ncks --trd -m -v ${1} ${2} | grep -E -i "^${1}: type" | cut -f 3 -d ' ' | cut -f 1 -d ',' ; }
 
 
 # defaults:
@@ -233,8 +234,13 @@ parse_options () {
      fi
      
      if [[ ($skip_remap == 0 || $add_fixed_flds == 1) && (-z ${src_grd+x} || -z ${dst_grd+x}) ]]; then
-         echo -e "${CR_RED}Error: remapping needs the srcgrd and dstgrd, please provided them by -s and -d respectively${CR_NUL}"
-         exit -1
+         if [[ $use_softlnk == 1 ]]; then
+            echo -e "${CR_GRN} no remapping needed"
+
+         else
+            echo -e "${CR_RED}Error: remapping needs the srcgrd and dstgrd, please provided them by -s and -d respectively${CR_NUL}"
+            exit -1
+         fi
      fi
 }
 
@@ -425,14 +431,20 @@ if [[ $add_fixed_flds == 1 ]]; then
    which ncl
    
    ncks -O -v area,landfrac,TSA ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
-   $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_lnd_${BASHPID}.nc --drc_out=${drc_rgr} \
+
+   if [[ $use_softlnk == 1 ]]; then
+      ln -sf ${drc_tmp}/area.nc ${drc_rgr}/area.nc
+
+   else
+      $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_lnd_${BASHPID}.nc --drc_out=${drc_rgr} \
                              ${drc_tmp}/area.nc > ${drc_log}/ncremap.lnd 2>&1
-   if [[ $? != 0 ]]; then
-      echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"
-      exit
+      if [[ $? != 0 ]]; then
+         echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"
+         exit
+      fi
+      mapid=$BASHPID
+      skip_genmap=$mapid
    fi
-   mapid=$BASHPID
-   skip_genmap=$mapid
 
    ncks -v area ${drc_rgr}/area.nc  ${drc_rgr}/areacella.nc
    ncks -v landfrac ${drc_rgr}/area.nc  ${drc_rgr}/sftlf.nc
@@ -442,24 +454,55 @@ if [[ $add_fixed_flds == 1 ]]; then
    ncatted -h -a ,global,d,,     ${drc_rgr}/sftlf.nc
 
    #area
-   ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' ${drc_rgr}/areacella.nc ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   if [[ $use_softlnk == 1 ]]; then
+       # the land model output area units is km2
+       ncap2 -O -h -4 -v -s 'areacella=area*1.e6;' ${drc_rgr}/areacella.nc ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   else
+       # in reammping is Sr unit
+       ncap2 -O -h -4 -v -s 'areacella=area*6371000.*6371000.;' ${drc_rgr}/areacella.nc ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   fi
    ncatted -h -a units,areacella,o,c,'m2' ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a standard_name,areacella,o,c,'cell_area' ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a long_name,areacella,o,c,'Land grid-cell area' ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a comment,areacella,o,c,'from land model output, so it is masked out ocean part' ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a original_name,areacella,o,c,'area' ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a _FillValue,areacella,o,f,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a missing_value,areacella,o,f,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+
+   dtype=`nctypget areacella ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"`
+   if [[ $dtype == 'NC_DOUBLE' ]]; then
+       ncatted -h -a _FillValue,areacella,o,d,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   else
+       ncatted -h -a _FillValue,areacella,o,f,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   fi
+
+   if [[ $dtype == 'NC_DOUBLE' ]]; then
+       ncatted -h -a missing_value,areacella,o,d,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   else
+       ncatted -h -a missing_value,areacella,o,f,1.e20 ${drc_fix}/areacella"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   fi
 
    /bin/rm -f  ${drc_rgr}/areacella.nc
 
    ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' ${drc_rgr}/sftlf.nc ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a _FillValue,sftlf,o,f,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
-   ncatted -h -a missing_value,sftlf,o,f,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+
+   dtype=`nctypget sftlf ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"`
+   if [[ $dtype == 'NC_DOUBLE' ]]; then
+       ncatted -h -a _FillValue,sftlf,o,d,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   else
+       ncatted -h -a _FillValue,sftlf,o,f,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   fi
+
+   if [[ $dtype == 'NC_DOUBLE' ]]; then
+       ncatted -h -a missing_value,sftlf,o,d,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   else
+       ncatted -h -a missing_value,sftlf,o,f,1.e20 ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   fi
+
    ncatted -h -a units,sftlf,o,c,'%' ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    /bin/rm -f  ${drc_rgr}/sftlf.nc 
    /bin/rm -f  ${drc_rgr}/area.nc 
+
+   exit
 fi
 
 
