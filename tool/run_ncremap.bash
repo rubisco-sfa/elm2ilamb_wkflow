@@ -20,7 +20,8 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-skip_genmap=651
 
 
-module load ncl/6.4.0  # for esmf regridded
+#module load ncl/6.4.0  # for esmf regridded
+module load ncl  # for esmf regridded
 module load nco
 
 
