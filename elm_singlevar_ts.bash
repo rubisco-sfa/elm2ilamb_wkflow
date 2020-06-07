@@ -647,6 +647,7 @@ if [[ $convert_to_cmip == 1 ]]; then
             for rgrf in *${stryear}*.nc; do
                 if [[ $rgrf != ncclimo* ]]; then
                    #/bin/mv $rgrf ncclimo.$rgrf
+                   # change to nc3 format as the fillvalue cannot be changed in nc4
                    ncks -3 $rgrf ncclimo.$rgrf
                 fi
             done
