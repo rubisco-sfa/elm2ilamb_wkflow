@@ -424,7 +424,7 @@ if [[ $add_fixed_flds == 1 ]]; then
 
    which ncl
    
-   ncks -O -v area,landfrac,TSA ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
+   ncks -O -v area,landfrac,TSA ${lndpath}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
    $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_lnd_${BASHPID}.nc --drc_out=${drc_rgr} \
                              ${drc_tmp}/area.nc > ${drc_log}/ncremap.lnd 2>&1
    if [[ $? != 0 ]]; then
@@ -460,6 +460,20 @@ if [[ $add_fixed_flds == 1 ]]; then
    ncatted -h -a units,sftlf,o,c,'%' ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    /bin/rm -f  ${drc_rgr}/sftlf.nc 
    /bin/rm -f  ${drc_rgr}/area.nc 
+
+  
+   ncks -O -v OCNFRAC ${atmpath}/*.cam.h0.${firstyr}-01.nc ${drc_tmp}/ocnfrac.nc 
+   $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_atm_${BASHPID}.nc --drc_out=${drc_rgr} \
+                             ${drc_tmp}/ocnfrac.nc > ${drc_log}/ncremap.lnd 2>&1
+   
+
+   ncap2 -O -h -4 -v -s 'sftof=OCNFRAC*100;' ${drc_rgr}/ocnfrac.nc ${drc_fix}/sftof"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,sftof,o,c,'Ocean Area Fraction' ${drc_fix}/sftof"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a _FillValue,sftof,o,f,1.e20 ${drc_fix}/sftof"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a missing_value,sftof,o,f,1.e20 ${drc_fix}/sftof"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a units,sftof,o,c,'%' ${drc_fix}/sftof"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   /bin/rm -f  ${drc_rgr}/ocnfrac.nc 
+   exit
 fi
 
 
