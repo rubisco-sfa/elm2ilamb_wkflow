@@ -30,6 +30,7 @@ ilamb_fields=0        # define varaible list for ILAMB
 convert_to_cmip=0     # 0 - not cmorize outputs; 1 - cmorize outputs 
 nconcurrent=0         # number of concurrent processes to run time serialzation, 0: equal to the number of total vairables, > 0 use it
 add_fixed_flds=0      # default, the fx fields won't be generated
+prep_cmor_data=0      # default, the fx fields won't be generated
 year_align=0
 use_ncremap=0
 use_cremap3=0
@@ -63,7 +64,7 @@ print_usage () {
    echo -e ""
    echo -e "\e[1mUsage:\e[0m \e[32m$CmdNam\e[0m --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
                   --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
-                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil"
+                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor"
 
    echo -e ""
    echo -e ""
@@ -91,6 +92,7 @@ print_usage () {
    echo -e "         \e[1m--skip_rename          \e[0m: switch to skip renaming for cmip conversion (the renaming was done in a previous run"
    echo -e "         \e[1m--ilamb                \e[0m: switch to rewrite the variables for analysis in ILAMB following CMIP conventions"
    echo -e "         \e[1m--addfxflds            \e[0m: switch to rewrite the two fixed datasets 'sftlf' and 'areacella' and exit. Default they won't be written out"
+   echo -e "         \e[1m--prepcmor             \e[0m: switch to do time serializatons for preparing the data for cmorization"
 
    echo -e ""
    echo -e ""
@@ -98,7 +100,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
+     longargs=ilamb,cmip,addfxflds,prepcmor,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -111,7 +113,7 @@ parse_options () {
      
      while true; do
           case "$1" in
-             -h) echo $printusage; exit 1; shift ;;
+             -h) print_usage; exit 1; shift ;;
              -v) set -x; mydebug=1; shift ;;
              -c|--caseid)
                      caseid=$2
@@ -178,6 +180,8 @@ parse_options () {
                      convert_to_cmip=1; shift ;;
              --addfxflds)
                      add_fixed_flds=1;  shift ;;
+             --prepcmor)
+                     prep_cmor_data=1;  shift ;;
              --ncclimo)
                      use_ncclimo=1;     shift ;;
              --pyreshaper)
@@ -242,6 +246,12 @@ parse_options () {
             exit -1
          fi
      fi
+
+
+     if [[ $ilamb_field == 1 && $prep_cmor_data == 1 ]]; then
+        echo -e "${CR_RED}Error: either option --ilamb or --prepcmor can be selected"
+        exit -1
+     fi
 }
 
 
@@ -254,7 +264,16 @@ cd $cmordir
 for cf in *.nc; do
    echo $cf
    /bin/rm -f cmortmp.nc
-   ncap2 -s "time_bounds=time_bounds+$(($difyear*(-365))); time=time_bounds(:,1);" $cf cmortmp.nc
+
+   test=`ncks --trd -m $cf | grep -E ': type' | cut -f 1 -d ' ' | sed 's/://' | sort`
+
+   if [[ "$test" == *"time_bounds"* ]]; then
+        ncap2 -s "time_bounds=time_bounds+$(($difyear*(-365))); time=time_bounds(:,1);" $cf cmortmp.nc
+   fi
+
+   if [[ "$test" == *"time_bnds"* ]]; then
+        ncap2 -s "time_bnds=time_bnds+$(($difyear*(-365))); time=time_bnds(:,1);" $cf cmortmp.nc
+   fi
    /bin/mv -f cmortmp.nc $cf
 done
 }
@@ -334,82 +353,44 @@ cd $outputpath/$caseid
 
 # improve it using JSON in future
 if [[ $ilamb_fields == 1 ]]; then 
-   #-fldlist_monthly="ALT AR BTRAN CH4PROD DENIT EFLX_LH_TOT ELAI ER ESAI FAREA_BURNED \
-   #- FCEV FCH4 FCH4TOCO2 FCOV FCTR FGEV FGR FGR12 FH2OSFC FINUNDATED FIRA FIRE FLDS FPG FPI \
-   #- FPSN FROST_TABLE FSA FSAT FSDS FSH FSM FSNO FSR F_DENIT F_NIT GPP \
-   #- GROSS_NMIN H2OSFC H2OSNO HR HTOP LAND_USE_FLUX LEAFC FROOTC NDEP_TO_SMINN NBP NEE NEP \
-   #- NET_NMIN NFIX_TO_SMINN NPP Q2M QCHARGE QDRAI QOVER QRUNOFF QRGWL QSNOMELT \
-   #- QSOIL QVEGE QVEGT RAIN RH2M SMIN_NO3 SMIN_NH4 SNOW SNOWDP SNOWICE SNOWLIQ SNOW_DEPTH \
-   #- SNOW_SINKS SNOW_SOURCES SOMHR TG TSA TSAI TLAI TV QBOT TBOT \
-   #- AGNPP FROOTC_ALLOC LEAFC_ALLOC WOODC_ALLOC WOOD_HARVESTC \
-   #- CH4_SURF_AERE_SAT CH4_SURF_AERE_UNSAT CH4_SURF_DIFF_SAT \
-   #- CH4_SURF_DIFF_UNSAT CH4_SURF_EBUL_SAT CONC_CH4_SAT \
-   #- CONC_CH4_UNSAT FCH4_DFSAT MR TOTCOLCH4 ZWT_CH4_UNSAT \
-   #- FSDSND FSDSNI FSDSVD FSDSVI \
-   #- TWS VOLR WA ZWT_PERCH ZWT WIND COL_FIRE_CLOSS \
-   #- F_DENIT_vr F_NIT_vr H2OSOI O_SCALAR SOILICE SOILLIQ SOILPSI TLAKE TSOI T_SCALAR W_SCALAR  \
-   #- SOIL1N SOIL2N SOIL3N SOIL1C SOIL2C SOIL3C TOTVEGC TOTVEGN TOTECOSYSC TOTLITC TOTLITC_1m \
-   #- TOTLITN_1m TOTSOMC TOTSOMC_1m TOTSOMN_1m CWDC PBOT"
-
-  
-   #ILAMB variables
-   fldlist_lmon="ALT AR BTRAN CH4PROD DENIT EFLX_LH_TOT ELAI ER ESAI FAREA_BURNED \
-    FCEV FCH4 FCH4TOCO2 FCOV FCTR FGEV FGR FGR12 FH2OSFC FINUNDATED FIRA FIRE FLDS FPG FPI \
-    FPSN FROST_TABLE FSA FSAT FSDS FSH FSM FSNO FSR F_DENIT F_NIT GPP \
-    GROSS_NMIN H2OSFC H2OSNO HR HTOP LAND_USE_FLUX LEAFC FROOTC NDEP_TO_SMINN NBP NEE NEP \
-    NET_NMIN NFIX_TO_SMINN NPP Q2M QCHARGE QDRAI QOVER QRUNOFF QRGWL QSNOMELT \
-    QSOIL QVEGE QVEGT RAIN RH2M SMIN_NO3 SMIN_NH4 SNOW SNOWDP SNOWICE SNOWLIQ SNOW_DEPTH \
-    SNOW_SINKS SNOW_SOURCES SOMHR TG TSA TREFMXAV TREFMNAV TSAI TLAI TV QBOT TBOT \
-    AGNPP FROOTC_ALLOC LEAFC_ALLOC WOODC_ALLOC WOOD_HARVESTC \
-    CH4_SURF_AERE_SAT CH4_SURF_AERE_UNSAT CH4_SURF_DIFF_SAT \
-    CH4_SURF_DIFF_UNSAT CH4_SURF_EBUL_SAT CONC_CH4_SAT \
-    CONC_CH4_UNSAT FCH4_DFSAT MR TOTCOLCH4 ZWT_CH4_UNSAT \
-    FSDSND FSDSNI FSDSVD FSDSVI \
-    TWS VOLR WA ZWT_PERCH ZWT WIND COL_FIRE_CLOSS \
-    F_DENIT_vr F_NIT_vr H2OSOI O_SCALAR SOILICE SOILLIQ SOILPSI TLAKE TSOI T_SCALAR W_SCALAR  \
-    SOIL1N SOIL2N SOIL3N SOIL1C SOIL2C SOIL3C TOTVEGC TOTVEGN TOTECOSYSC TOTLITC TOTLITC_1m \
-    TOTLITN_1m TOTSOMC TOTSOMC_1m TOTSOMN_1m CWDC PBOT"
-
-   #LS3MIP variables
-   #fldlist_lmon="SNOWLIQ MR SOILICE CWDC QRUNOFF SOILLIQ TOTPRODC SNOBCMCL TOTVEGC \
-   #              LIVESTEMC GPP FAREA_BURNED SOIL2C CPOOL DEADSTEMC SOILC TSOI NEP \
-   #              SOIL3C WOODC_ALLOC QVEGE PCT_CFT FROOTC_ALLOC SOILWATER_10CM FSNO \
-   #              LIVECROOTC SNOWICE COL_FIRE_CLOSS LITR1C_TO_SOIL1C LITFALL TLAI \
-   #              TOTLITC QSOIL SNOWDP DEADCROOTC LAND_USE_FLUX QOVER NPP QVEGT NBP \
-   #              QSNWCPICE QINTR HR LITR2C_TO_SOIL2C PCT_NAT_PFT WOOD_HARVESTC LEAFC \
-   #              PCT_LANDUNIT SOIL1C LITR3C_TO_SOIL3C GR QSNOMELT AR PCT_NAT_PCT LEAFC_ALLOC"
+   temp_amon=$(<"$SrcDir/Amon_ilamb.txt")
+   temp_lmon=$(<"$SrcDir/Lmon_ilamb.txt")
 
 
-   #fldlist_lmon="GPP"
-
-   #fldlist_amon="PRECSC PRECSL TREFHT TREFHTMN TREFHTMX RHREFHT CO2 SHFLX LHFLX QFLX PRECC PRECL FLDS FLNS FSDS FSNS"
-   #fldlist_amon="SHFLX LHFLX QFLX PRECC PRECL FLDS FLNS FSDS FSNS"
-   #fldlist_amon="PRECSC PRECSL"
-   #fldlist_amon="TREFHT TREFHTMN TREFHTMX RHREFHT"
-
+   # remove duplicates
+   fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+   fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
    fldlist_annual=( )
 else
+   if [[ $prep_cmor_data == 1 ]]; then
+       temp_amon=$(<"$SrcDir/Amon_cmor.txt")
+       temp_lmon=$(<"$SrcDir/Lmon_cmor.txt")
 
-   #fldlist_lmon="TREFMXAV TREFMNAV" 
-   #fldlist_lmon="NEE"
-   #fldlist_lmon="WT" 
-
-   fldlist_amon="PRECSC PRECSL TREFHT TREFHTMN TREFHTMX RHREFHT SHFLX LHFLX QFLX PRECC PRECL FLDS FLNS FSDS FSNS SFCO2 SFCO2_LND SFCO2_OCN SFCO2_FFF"
-
-   #all h0 files
-   #fldlist_lmon=$caseid
-   #-fldlist_monthly="ALT FCH4 FAREA_BURNED EFLX_LH_TOT FH2OSFC LAND_USE_FLUX H2OSOI NBP NEE \
-   #- NPP Q2M RAIN SNOW SNOWDP SNOW_DEPTH TWS VOLR ZWT TSA RH2M QRUNOFF QOVER QDRAI FSNO TSOI \
-   #- TLAI TSAI ELAI ESAI FSH FSDS FSA FIRE FIRA LEAFC TOTSOMC TOTSOMC_1m TOTVEGC TOTECOSYSC \
-   #- TLAKE CWDC COL_FIRE_CLOSS WOOD_HARVESTC GPP ER NEP QSOIL QVEGE QVEGT QRGWL QSNOMELT"
-   fldlist_annual=( )
+       # remove duplicates
+       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+       fldlist_annual=( )
+   fi
 fi
+
 
 
 if [[ ! -z $more_vars ]]; then
    fldlist_monthly="${more_vars} ${fldlist_monthly}"
 fi
 
+
+
+if [[ $prep_cmor_data == 1 && $use_softlnk == 1 ]]; then
+   firstyr=`printf "%04d" $((stryear+year_align))`
+   last_yr=`printf "%04d" $((endyear+year_align))`
+   mkdir -p ${drc_out}/fx
+   ncks -O -v area,landfrac,ZBOT ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
+   ncrename -v landfrac,LANDFRAC ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
+   exit
+fi
+
+#exit 'xxx'
 # fixed field first
 if [[ $add_fixed_flds == 1 ]]; then
 
@@ -584,6 +565,10 @@ if [[ $skip_remap == 0 ]]; then
          fi
          comp="lnd"
          source $SrcDir/tool/run_ncremap.bash
+         if [[ $year_align != 0 ]]; then
+            cd $drc_rgr
+            time_shift $year_align $drc_rgr
+         fi
       fi
 
       #atmos
@@ -592,7 +577,12 @@ if [[ $skip_remap == 0 ]]; then
          drc_rgr=${DATA}/rgr/atm
          fldlist_monthly=$fldlist_amon
          comp="atm"
+
          source $SrcDir/tool/run_ncremap.bash
+         if [[ $year_align != 0 ]]; then
+            cd $drc_rgr
+            time_shift $year_align $drc_rgr
+         fi
       fi
    fi
 
@@ -610,15 +600,22 @@ else
       if [ ! -z "$fldlist_lmon" ]; then
          drc_out=${DATA}/org/lnd
          drc_rgr=${DATA}/rgr/lnd
+         cd $drc_rgr; ln -sf $drc_out/*.nc .
+         if [[ $year_align != 0 ]]; then
+            cd $drc_rgr
+            time_shift $year_align $drc_rgr
+         fi
       fi 
 
       if [ ! -z "$fldlist_amon" ]; then 
          drc_out=${DATA}/org/atm
          drc_rgr=${DATA}/rgr/atm
+         cd $drc_rgr; ln -sf $drc_out/*.nc .
+         if [[ $year_align != 0 ]]; then
+            cd $drc_rgr
+            time_shift $year_align $drc_rgr
+         fi
       fi 
-
-      cd $drc_rgr; ln -sf $drc_out/*.nc .
-
    else
       echo "No remapped or linked files for cmorization"
    fi
