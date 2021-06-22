@@ -72,13 +72,13 @@ done
 
 if [[ "$mydebug" == 1 ]]; then
    echo $vars
-   `pwd`
 fi
 
 
 echo "Time serialization stats:"
 
 export HDF5_USE_FILE_LOCKING=FALSE
+
 if [[ $nconcurrent == 0 ]]; then
    time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
         ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
