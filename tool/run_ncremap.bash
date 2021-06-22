@@ -20,8 +20,8 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-skip_genmap=651
 
 
-#module load ncl/6.4.0  # for esmf regridded
-module load ncl  # for esmf regridded
+module load ncl/6.4.0  # for esmf regridded
+#module load ncl  # for esmf regridded
 module load nco
 
 
@@ -70,10 +70,14 @@ if [[ x$xskip_genmap == "x0" ]]; then
     echo "Generate remapping coefficients"
 
     if [[ $comp == "lnd" ]]; then
+       echo "$myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.clm2.h0.${firstyr}-01.nc" 
        $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
                             ${drc_inp}/*.clm2.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
 
     else
+       echo "$myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.cam.h0.${firstyr}-01.nc"
        $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
                             ${drc_inp}/*.cam.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
     fi
