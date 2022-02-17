@@ -832,15 +832,19 @@ if [ ${bch_pbs} = 'Yes' ] || [ ${bch_slr} = 'Yes' ]; then
     fi # !bch_slr
 else # !bch
     # Interactive environment
-    if [ -p /dev/stdin ] || [ ! -t 0 ]; then
+    #-xum if [ -p /dev/stdin ] || [ ! -t 0 ]; then
+    #-xum when using srun to the script to several nodes, the '&' cause the [ ! -t 0 ] 
+    # always true though the stdin is not redirected.
+    if [ -p /dev/stdin ]; then
 	# Interactive environments unambiguously cause -p to return true for stdin pipes
 	# Interactive environments unambiguously cause -t 0 to return false for stdin redirection
-	inp_std='Yes'
+       inp_std='Yes'
     fi # !stdin
 fi # !bch
 if [ ${inp_std} = 'Yes' ] && [ ${inp_psn} = 'Yes' ]; then
     echo "${spt_nm}: ERROR expecting input both from stdin and positional command-line arguments\n"
-    exit 1
+    #-xum, same reason as above to comment out the following "exit" statement
+    #-exit -1 
 fi # !inp_std
 
 # Derived variables

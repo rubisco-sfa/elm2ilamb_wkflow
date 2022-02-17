@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-#-set -x
 # This script is used to remap ne grid to regular grid and cannot be run as
 # a standalone mode since some variables are defined in the script that source
 # this script
@@ -20,10 +19,13 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-skip_genmap=651
 
 
-#module load ncl/6.4.0  # for esmf regridded
-module load ncl  # for esmf regridded
-module load nco
+if [[ *"cori"* == "$HOST" ]]; then
+   module load ncl/6.4.0  # for esmf regridded
+else
+   module load ncl  # for esmf regridded
+fi
 
+module load nco
 
 # ncdmnsz $dmn_nm $fl_nm : What is dimension size?
 function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d ' ' | uniq ; }
@@ -38,6 +40,7 @@ if [[ $mydebug == 1 ]]; then
   echo $drc_map
 fi
 
+which ncl
 
 bgn_year=$stryear
 end_year=$endyear
@@ -55,6 +58,8 @@ else
 fi
 
 echo "Begin remapping ..."
+which ESMF_RegridWeightGen
+which ncl
 
 firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
@@ -70,10 +75,14 @@ if [[ x$xskip_genmap == "x0" ]]; then
     echo "Generate remapping coefficients"
 
     if [[ $comp == "lnd" ]]; then
+       echo "$myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.clm2.h0.${firstyr}-01.nc" 
        $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
                             ${drc_inp}/*.clm2.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
 
     else
+       echo "$myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
+                            ${drc_inp}/*.cam.h0.${firstyr}-01.nc"
        $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
                             ${drc_inp}/*.cam.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
     fi
