@@ -40,6 +40,7 @@ use_pyreshaper=0
 skip_genmap=0
 skip_rename=0
 no_gen_ts=0
+high_freq_data=0
 
 mydebug=0
 
@@ -64,7 +65,7 @@ print_usage () {
    echo -e ""
    echo -e "\e[1mUsage:\e[0m \e[32m$CmdNam\e[0m --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
                   --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
-                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor"
+                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor --hfs"
 
    echo -e ""
    echo -e ""
@@ -93,6 +94,7 @@ print_usage () {
    echo -e "         \e[1m--ilamb                \e[0m: switch to rewrite the variables for analysis in ILAMB following CMIP conventions"
    echo -e "         \e[1m--addfxflds            \e[0m: switch to rewrite the two fixed datasets 'sftlf' and 'areacella' and exit. Default they won't be written out"
    echo -e "         \e[1m--prepcmor             \e[0m: switch to do time serializatons for preparing the data for cmorization"
+   echo -e "         \e[1m--hfs                  \e[0m: switch for high frequency data (daily, hourly)"
 
    echo -e ""
    echo -e ""
@@ -100,7 +102,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -182,6 +184,8 @@ parse_options () {
                      add_fixed_flds=1;  shift ;;
              --prepcmor)
                      prep_cmor_data=1;  shift ;;
+             --hfs)
+                     high_freq_data=1;  shift ;;
              --ncclimo)
                      use_ncclimo=1;     shift ;;
              --pyreshaper)
@@ -359,6 +363,9 @@ if [[ $ilamb_fields == 1 ]]; then
    # remove duplicates
    fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
    fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+
+   #fldlist_amon='U'
+   #fldlist_lmon=''
    fldlist_annual=( )
 else
    if [[ $prep_cmor_data == 1 ]]; then
@@ -371,6 +378,8 @@ else
        fldlist_annual=( )
    fi
 fi
+
+echo 'xxxdeb', $fldlist_lmon
 
 if [[ ! -z $more_vars ]]; then
    fldlist_monthly="${more_vars} ${fldlist_monthly}"
