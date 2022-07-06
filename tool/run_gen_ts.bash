@@ -40,10 +40,14 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 bgn_year=$((10#$stryear))
 end_year=$((10#$endyear))
 
-use_mynco=1
+use_mynco=2
 
 if [[ $use_mynco == 1 ]]; then
    myncclimo=$SrcDir/tool/ncclimo
+elif [[ $use_mynco == 2 ]]; then
+   echo "use the system ncclimo"
+   export NCO_PATH_OVERRIDE=No
+   myncclimo=`which ncclimo`
 else
    myncclimo=/global/u1/z/zender/bin_cori/ncclimo
 fi
@@ -67,7 +71,12 @@ cd ${drc_inp}
 ncfiles=''
 for iy in `seq $((bgn_year+year_align)) $((end_year+year_align))`; do
     cy=`printf "%04d" $iy`
-    ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*.nc`
+
+    if [[ $high_freq_data == 0 ]]; then
+        ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*.nc`
+    else
+        ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*00000.nc`
+    fi
 done
 
 if [[ "$mydebug" == 1 ]]; then
@@ -80,11 +89,21 @@ echo "Time serialization stats:"
 export HDF5_USE_FILE_LOCKING=FALSE
 
 if [[ $nconcurrent == 0 ]]; then
-   time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
-        ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   if [[ $high_freq_data == 0 ]]; then
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+           ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   else
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 --clm_md='hfs'\
+           ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   fi
 else
-   time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
-        ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   if [[ $high_freq_data == 0 ]]; then
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+           ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   else
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 --clm_md='hfs'\
+           ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.lnd 2>&1
+   fi
 fi
 
 if [ "$?" != 0 ]; then
