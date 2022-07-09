@@ -376,10 +376,47 @@ else
        fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
        fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
        fldlist_annual=( )
+   else
+       if [[ -f "$SrcDir/Amon_user.txt" ]]; then
+          temp_amon=$(<"$SrcDir/Amon_user.txt")
+       else
+	  temp_amon=()
+       fi
+       if [[ -f "$SrcDir/Lmon_user.txt" ]]; then
+          temp_lmon=$(<"$SrcDir/Lmon_user.txt")
+       else
+	  temp_lmon=()
+       fi
+       if [[ -f "$SrcDir/Omon_user.txt" ]]; then
+          temp_omon=$(<"$SrcDir/Omon_user.txt")
+       else
+	  temp_omon=()
+       fi
+
+       # remove duplicates
+       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+       fldlist_omon=`echo $temp_omon | tr ' ' '\n' | sort -u | xargs`
+
+       if [ ! -z "$fldlist_omon" ]; then
+	  tmplst0=($fldlist_omon)
+	  tmplst1=''
+	  tmplst2=''
+	  for var in "${tmplst0[@]}"; do
+	      tmplst1="$tmplst1 timeMonthly_avg_$var"
+	      tmplst2="$tmplst2 timeMonthly_ecosys_diag_$var"
+	  done
+
+	  fldlist_omon=()
+	  fldlist_omon="$tmplst1 $tmplst2"
+       fi
+
+       fldlist_annual=( )
    fi
 fi
 
-echo 'xxxdeb', $fldlist_lmon
+echo 'xxxdeb', $fldlist_omon
+
 
 if [[ ! -z $more_vars ]]; then
    fldlist_monthly="${more_vars} ${fldlist_monthly}"
@@ -513,34 +550,28 @@ drc_tmp=${DATA}/tmp # Temporary/intermediate-file directory
 drc_map=${DATA}/map # Map directory
 drc_log=${DATA}/log # Log directory
 
-if [[ ! -d $drc_out/lnd ]]; then
-   mkdir -p $drc_out/lnd
-fi
-if [[ ! -d $drc_out/atm ]]; then
-   mkdir -p $drc_out/atm
-fi
-if [[ ! -d $drc_rgr/lnd ]]; then
-   mkdir -p $drc_rgr/lnd
-fi
-if [[ ! -d $drc_rgr/atm ]]; then
-   mkdir -p $drc_rgr/atm
-fi
-if [[ ! -d $drc_tmp ]]; then
-   mkdir -p $drc_tmp
-fi
-if [[ ! -d $drc_map ]]; then
-   mkdir -p $drc_map
-fi
-if [[ ! -d $drc_log ]]; then
-   mkdir -p $drc_log
-fi
+CompDirs=(atm lnd ocn)
+for cmp in "${CompDirs[@]}"; do
+   if [[ ! -d $drc_out/$cmp ]]; then
+      mkdir -p $drc_out/$cmp
+   fi
 
+   if [[ ! -d $drc_rgr/$cmp ]]; then
+      mkdir -p $drc_rgr/$cmp
+   fi
+done
 
+TempDirs=($drc_tmp $drc_map $drc_log)
+for tdr in "${TempDirs[@]}"; do
+   if [[ ! -d $tdr ]]; then
+      mkdir -p $tdr
+   fi
+done
 
 # time-serialization
 if [[ $no_gen_ts == 0 ]]; then
    if [ ! -z "$fldlist_lmon" ]; then 
-      drc_out=${DATA}/org/lnd
+      drc_out=${drc_out}/lnd
       fldlist_monthly=$fldlist_lmon
       comp="clm2"
       if [[ $use_ncclimo == 1 ]]; then
@@ -551,12 +582,20 @@ if [[ $no_gen_ts == 0 ]]; then
    fi
 
    if [ ! -z "$fldlist_amon" ]; then 
-      drc_out=${DATA}/org/atm
+      drc_out=${drc_out}/atm
       fldlist_monthly=$fldlist_amon
       comp="cam"
-      if [[ ! -d $drc_out ]]; then
-         mkdir -p $drc_out
+      if [[ $use_ncclimo == 1 ]]; then
+         source $SrcDir/tool/run_gen_ts.bash
+      else
+         source $SrcDir/tool/run_reshaper.bash
       fi
+   fi
+
+   if [ ! -z "$fldlist_omon" ]; then 
+      drc_out=${drc_out}/ocn
+      fldlist_monthly=$fldlist_omon
+      comp="mpaso"
       if [[ $use_ncclimo == 1 ]]; then
          source $SrcDir/tool/run_gen_ts.bash
       else
