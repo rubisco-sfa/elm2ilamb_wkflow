@@ -102,7 +102,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:,tabname:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -174,6 +174,10 @@ parse_options () {
              --morevars)
                       more_vars=$2
      		echo -e "more vars: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
+             --tabname)
+                      tab_name=$2
+     		echo -e "more vars: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
+             --no-gen-ts)
              --no-gen-ts)
                      no_gen_ts=1;       shift ;;
              --ilamb)
@@ -356,48 +360,61 @@ cd $outputpath/$caseid
 
 
 # improve it using JSON in future
+fldlist_amon=''
+fldlist_lmon=''
+fldlist_omon=''
+
 if [[ $ilamb_fields == 1 ]]; then 
-   temp_amon=$(<"$SrcDir/Amon_ilamb.txt")
-   temp_lmon=$(<"$SrcDir/Lmon_ilamb.txt")
-
-   # remove duplicates
-   fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
-   fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
-
-   #fldlist_amon='U'
-   #fldlist_lmon=''
+   if [[ ${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all' ]]; then
+       temp_amon=$(cat "$SrcDir/Amon_ilamb.txt"|grep -v "#")
+       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+   else
+       fldlist_amon=''
+   fi
+   if [[ ${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all' ]]; then
+       temp_lmon=$(cat "$SrcDir/Lmon_ilamb.txt"|grep -v "#")
+       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+   else
+       fldlist_lmon=''
+   fi
    fldlist_annual=( )
 else
    if [[ $prep_cmor_data == 1 ]]; then
-       temp_amon=$(<"$SrcDir/Amon_cmor.txt")
-       temp_lmon=$(<"$SrcDir/Lmon_cmor.txt")
 
-       # remove duplicates
-       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
-       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+       if [[ ${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all' ]]; then
+           temp_amon=$(cat "$SrcDir/Amon_cmor.txt" |grep -v "#")
+           fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+       else
+           fldlist_amon=''
+       fi
+       if [[ ${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all' ]]; then
+           temp_lmon=$(cat "$SrcDir/Lmon_cmor.txt" |grep -v "#")
+           fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+       else
+           fldlist_lmon=''
+       fi
        fldlist_annual=( )
    else
        if [[ -f "$SrcDir/Amon_user.txt" ]]; then
-          temp_amon=$(<"$SrcDir/Amon_user.txt")
-       else
-	  temp_amon=()
+          if [[ ${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all' ]]; then
+             temp_amon=$(cat "$SrcDir/Amon_user.txt"|grep -v "#")
+             fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+	  fi
        fi
        if [[ -f "$SrcDir/Lmon_user.txt" ]]; then
-          temp_lmon=$(<"$SrcDir/Lmon_user.txt")
-       else
-	  temp_lmon=()
+          if [[ ${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all' ]]; then
+             temp_lmon=$(cat "$SrcDir/Lmon_user.txt"|grep -v "#")
+             fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+          fi
        fi
        if [[ -f "$SrcDir/Omon_user.txt" ]]; then
-          temp_omon=$(<"$SrcDir/Omon_user.txt")
-       else
-	  temp_omon=()
+          if [[ ${tab_name,,} == 'omon' ||  ${tab_name,,} == 'all' ]]; then
+             temp_omon=$(cat "$SrcDir/Omon_user.txt" |grep -v "#")
+             fldlist_omon=`echo $temp_omon | tr ' ' '\n' | sort -u | xargs`
+          fi
        fi
 
-       # remove duplicates
-       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
-       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
-       fldlist_omon=`echo $temp_omon | tr ' ' '\n' | sort -u | xargs`
-
+       # append ocean variable names
        if [ ! -z "$fldlist_omon" ]; then
 	  tmplst0=($fldlist_omon)
 	  tmplst1=''
