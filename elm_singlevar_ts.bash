@@ -64,7 +64,7 @@ print_usage () {
    echo -e ""
    echo -e ""
    echo -e "\e[1mUsage:\e[0m \e[32m$CmdNam\e[0m --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
-                  --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
+                  --experiment[-e] --model[-m] --numcc --numcc-remap [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
                   --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor --hfs"
 
    echo -e ""
@@ -102,7 +102,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:,tabname:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,numcc-remap:,srcgrid:,dstgrid:,morevar:,tabname:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
@@ -168,16 +168,18 @@ parse_options () {
              --numcc)
                      nconcurrent=$2
      		echo -e "Number of concurrent processes: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
+             --numcc-remap)
+                     numcc_remap=$2
+     		echo -e "Number of concurrent processes for remapping: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              --skip-genmap)
                      skip_genmap=$2
      		echo -e "skip_genmap: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              --morevars)
-                      more_vars=$2
+                     more_vars=$2
      		echo -e "more vars: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              --tabname)
-                      tab_name=$2
-     		echo -e "more vars: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
-             --no-gen-ts)
+                     tab_name=$2
+		echo -e "tab name (Lmon, Amon, Omon, all): ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              --no-gen-ts)
                      no_gen_ts=1;       shift ;;
              --ilamb)
