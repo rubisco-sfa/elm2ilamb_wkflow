@@ -6,42 +6,48 @@ module load nco
 
 
 #CNP
-#-CaseIDs=(\
-#-           20191123.CO21PCTFUL_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy \
-#-           20191123.CO21PCTBGC_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy \
-#-           20191020.CO21PCTCTL_RUBISCO_CNPCTC1850_OIBGC.ne30_oECv3.compy \
-#-           20191123.CO21PCTRAD_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy)
+CaseIDs=(\
+           20191123.CO21PCTFUL_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy \
+           20191123.CO21PCTBGC_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy \
+           20191020.CO21PCTCTL_RUBISCO_CNPCTC1850_OIBGC.ne30_oECv3.compy \
+           20191123.CO21PCTRAD_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy)
 
 
-#-TopDir=/global/cfs/projectdirs/m3522/1pctco2_temp/
-#-OutDir=/global/cscratch1/sd/minxu/e3sm_cnp_C4MIP_1pctCO2/
+TopDir=/global/cfs/projectdirs/m3522/cmip6/1pctCO2-E3SM/
+OutDir=/global/cscratch1/sd/minxu/e3sm_cnp_C4MIP_1pctCO2/
 
-#-YearAlign=1899
-#-YearRange=0001-0150
+YearAlign=1899
+YearRange=0001-0150
 
 #CN
 #-CaseIDs=(\
 #-            20200802.CO21PCTFUL_RUBISCO_CNCTC20TR_OIBGC.ne30_oECv3.compy \
-#-            20200509.CO21PCTBGC_RUBISCO_CNCTC20TR_OIBGC.ne30_oECv3.compy \
+#-            20200509.CO21PCTBGC_RUBISCO_CNCTC1850_OIBGC.ne30_oECv3.compy \
 #-            20200509.CO21PCTCTL_RUBISCO_CNCTC1850_OIBGC.ne30_oECv3.compy \
 #-            20200622.CO21PCTRAD_RUBISCO_CNCTC20TR_OIBGC.ne30_oECv3.compy)
 #-
-#-ExpNms=(\
-#-        1pctco2ful \
-#-        1pctco2bgc \
-#-        1pctco2ctl \
-#-        1pctco2rad) 
-
-CaseIDs=(20200509.CO21PCTBGC_RUBISCO_CNCTC1850_OIBGC.ne30_oECv3.compy)
-ExpNms=(1pctco2bgc)
-
-YearAlign=1975
-YearRange=0001-0150
-
-TopDir=/global/cfs/projectdirs/m3522/cmip6/1pctCO2-E3SM/
-OutDir=/global/cscratch1/sd/minxu/e3sm_cn_C4MIP_1pctCO2/
 
 
+#-YearAlign=1975
+#-YearRange=0001-0150
+#-
+#-TopDir=/global/cfs/projectdirs/m3522/cmip6/1pctCO2-E3SM/
+#-OutDir=/global/cscratch1/sd/minxu/e3sm_cn_C4MIP_1pctCO2/
+
+ExpNms=(\
+        1pctco2ful \
+        1pctco2bgc \
+        1pctco2ctl \
+        1pctco2rad) 
+
+# abrupt 4xCO2
+#-CaseIDs=(20200705.4xCO2FUL_RUBISCO_CNPCTC20TR_OIBGC.I1900.ne30_oECv3.compy)
+#-ExNms=(Abrupt4xCO2)
+#-
+#-YearAlign=1899
+#-YearRange=0001-0150
+#-TopDir=/global/cfs/projectdirs/m3522/1pctco2_temp/
+#-OutDir=/global/cscratch1/sd/minxu/e3sm_cnp_C4MIP_Abrupt4xCO2/
 
 #-----------------
 
@@ -58,7 +64,9 @@ for cid in "${CaseIDs[@]}"; do
           -o $OutDir \
           -e ${ExpNms[$i]} -m e3sm \
           -s $SrcGrd \
-          -g $DstGrd --ncclimo --ncremap --prepcmor &
+          -g $DstGrd --ncclimo --ncremap --ilamb &
+          #-g $DstGrd --ncclimo --ncremap --prepcmor &
+          #-g $DstGrd --no-gen-ts --ncremap --prepcmor &
     i=$((i+1))
     echo $i
 done
