@@ -92,12 +92,12 @@ print_usage () {
    echo -e "         \e[1m--ncreamp|creamp3      \e[0m: switch of remapping methods either using ncremap or conv_remap3, cannot be used together or with -linkfil"
    echo -e "         \e[1m--linkfil              \e[0m: switch to link the original to remapped files instead of actual remapping"
    echo -e "         \e[1m--cmip                 \e[0m: switch to rewrite model outputs following CMIP conventions"
-   echo -e "         \e[1m--skip_rename          \e[0m: switch to skip renaming for cmip conversion (the renaming was done in a previous run"
+   echo -e "         \e[1m--skip_rename          \e[0m: switch to skip renaming for cmip conversion (the renaming was done in a previous run)"
    echo -e "         \e[1m--ilamb                \e[0m: switch to rewrite the variables for analysis in ILAMB following CMIP conventions"
    echo -e "         \e[1m--addfxflds            \e[0m: switch to rewrite the two fixed datasets 'sftlf' and 'areacella' and exit. Default they won't be written out"
    echo -e "         \e[1m--prepcmor             \e[0m: switch to do time serializatons for preparing the data for cmorization"
    echo -e "         \e[1m--hfs                  \e[0m: switch for high frequency data (daily, hourly)"
-   echo -e "         \e[1m--hfs                  \e[0m: switch to the old names in the histroy files, i.e. cam and clm2 instead of eam and elm"
+   echo -e "         \e[1m--oldname              \e[0m: switch to the old names in the histroy files, i.e. cam and clm2 instead of eam and elm"
 
    echo -e ""
    echo -e ""
@@ -105,7 +105,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,oldname,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,srcgrid:,dstgrid:,morevar:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
