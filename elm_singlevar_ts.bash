@@ -99,6 +99,7 @@ print_usage () {
    echo -e "         \e[1m--ilamb                \e[0m: switch to rewrite the variables for analysis in ILAMB following CMIP conventions"
    echo -e "         \e[1m--addfxflds            \e[0m: switch to rewrite the two fixed datasets 'sftlf' and 'areacella' and exit. Default they won't be written out"
    echo -e "         \e[1m--prepcmor             \e[0m: switch to do time serializatons for preparing the data for cmorization"
+   echo -e "         \e[1m--tabname              \e[0m: specify which tab to process (amon, lmon, or all when --hfs, amon mean aday omon mean oday)"
    echo -e "         \e[1m--hfs                  \e[0m: switch for high frequency data (daily, hourly)"
    echo -e "         \e[1m--oldname              \e[0m: switch to the old names in the histroy files, i.e. cam and clm2 instead of eam and elm"
 
@@ -375,89 +376,80 @@ cd $outputpath/$caseid
 
 
 # improve it using JSON in future
+# only support land, atmosphere and ocean currently
+
 fldlist_amon=''
 fldlist_lmon=''
 fldlist_omon=''
 
-if [[ $ilamb_fields == 1 ]]; then 
-   if [[ (${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Amon_ilamb.txt" ]]; then
-       temp_amon=$(cat "$SrcDir/template/Amon_ilamb.txt"|grep -v "#")
-       fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
-   else
-       fldlist_amon=''
-   fi
-   if [[ (${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Lmon_ilamb.txt" ]]; then
-       temp_lmon=$(cat "$SrcDir/template/Lmon_ilamb.txt"|grep -v "#")
-       fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
-   else
-       fldlist_lmon=''
-   fi
-   fldlist_annual=( )
+
+if [[ ${tab_name,,} == 'all' && high_freq_data == 1 ]]; then
+   Atab='Aday'
+   Ltab='Lday'
+   Otab='Oday'
+
+elif [[  high_freq_data == 0 ]]; then
+   Atab='Amon'
+   Ltab='Lmon'
+   Otab='Omon'
 else
-   if [[ $prep_cmor_data == 1 ]]; then
-       if [[ (${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Amon_cmor.txt" ]]; then
-           temp_amon=$(cat "$SrcDir/template/Amon_cmor.txt" |grep -v "#")
-           fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
-       else
-           fldlist_amon=''
-       fi
-       if [[ (${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Lmon_cmor.txt" ]]; then
-           temp_lmon=$(cat "$SrcDir/template/Lmon_cmor.txt" |grep -v "#")
-           fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
-       else
-           fldlist_lmon=''
-       fi
-
-       if [[ (${tab_name,,} == 'omon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Omon_cmor.txt" ]]; then
-           temp_omon=$(cat "$SrcDir/template/Omon_cmor.txt" |grep -v "#")
-           fldlist_omon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
-       else
-           fldlist_omon=''
-       fi
-
-       fldlist_annual=( )
-   else
-       if [[ (${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Amon_user.txt" ]]; then
-          temp_amon=$(<"$SrcDir/template/Amon_user.txt")
-       else
-	  temp_amon=()
-       fi
-       if [[ (${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Lmon_user.txt" ]]; then
-          temp_lmon=$(<"$SrcDir/template/Lmon_user.txt")
-       else
-	  temp_lmon=()
-       fi
-       if [[ (${tab_name,,} == 'omon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Omon_user.txt" ]]; then
-          temp_omon=$(<"$SrcDir/template/Omon_user.txt")
-       else
-	  temp_omon=()
-       fi
-
-       fldlist_omon=$temp_omon
-
-       # append ocean variable names
-       if [ ! -z "$fldlist_omon" ]; then
-	  tmplst0=($fldlist_omon)
-	  tmplst1=''
-	  tmplst2=''
-	  for var in "${tmplst0[@]}"; do
-	      tmplst1="$tmplst1 timeMonthly_avg_$var"
-	      tmplst2="$tmplst2 timeMonthly_ecosys_diag_$var"
-	  done
-
-	  fldlist_omon=()
-	  fldlist_omon="$tmplst1 $tmplst2"
-       fi
-
-       fldlist_annual=( )
-   fi
+   tabname=${tab_name,,}
+   Atab="${tabname^}"
+   Ltab="${tabname^}"
+   Otab="${tabname^}"
 fi
 
+
+# varaible collection. ilamb, cmor, and user
+if [[ $ilamb_fields == 1 ]]; then 
+   Vcol='ilamb'
+elif [[ $prep_cmor_data == 1 ]]; then
+   Vcol='cmor'
+else
+   Vcol='user'
+fi
+
+
+if [[ ${tab_name,,} =~ ^a && -f "$SrcDir/template/${Atab}_${Vcol}.txt" ]]; then
+    temp_amon=$(cat "$SrcDir/template/${Atab}_${Vcol}.txt"|grep -v "#")
+    fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
+else
+    fldlist_amon=''
+fi
+
+if [[ ${tab_name,,} =~ ^l && -f "$SrcDir/template/${Ltab}_${Vcol}.txt" ]]; then
+    temp_lmon=$(cat "$SrcDir/template/${Ltab}_${Vcol}.txt"|grep -v "#")
+    fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+else
+    fldlist_lmon=''
+fi
+
+if [[ ${tab_name,,} =~ ^o && -f "$SrcDir/template/${Otab}_${Vcol}.txt" ]]; then
+    temp_omon=$(cat "$SrcDir/template/${Otab}_${Vcol}.txt"|grep -v "#")
+    fldlist_omon=`echo $temp_omon | tr ' ' '\n' | sort -u | xargs`
+else
+    fldlist_omon=''
+fi
+
+# append ocean variable names
+if [ ! -z "$fldlist_omon" ]; then
+   tmplst0=($fldlist_omon)
+   tmplst1=''
+   tmplst2=''
+   for var in "${tmplst0[@]}"; do
+       tmplst1="$tmplst1 timeMonthly_avg_$var"
+       tmplst2="$tmplst2 timeMonthly_ecosys_diag_$var"
+   done
+
+   fldlist_omon=()
+   fldlist_omon="$tmplst1 $tmplst2"
+fi
+
+fldlist_annual=( )
 
 if [[ ! -z $more_vars ]]; then
    fldlist_monthly="${more_vars} ${fldlist_monthly}"
 fi
-
 
 
 if [[ $prep_cmor_data == 1 && $use_softlnk == 1 ]]; then
