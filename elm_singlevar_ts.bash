@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 
 # Author: Min Xu
@@ -50,6 +50,7 @@ mydebug=0
 
 Script=`readlink -f $0`
 SrcDir=`dirname $Script`
+
 
 
 # define colors
@@ -147,20 +148,25 @@ parse_options () {
              -i|--caseidpath)
                      caseidpath=$2
                      if [[ $caseidpath =~ .*,.* ]]; then
-                        atmpath="$(echo $caseidpath | cut -d',' -f1)" 
-                        lndpath="$(echo $caseidpath | cut -d',' -f2)" 
+                        atmpath0="$(echo $caseidpath | cut -d',' -f1)" 
+                        lndpath0="$(echo $caseidpath | cut -d',' -f2)" 
 
-                        atmpath=`readlink -f $atmpath`
-                        lndpath=`readlink -f $lndpath`
+                        atmpath=`readlink -f $atmpath0`
+                        lndpath=`readlink -f $lndpath0`
+                        atmpath=$( [ "x$atmpath" = "x" ] && echo $atmpath0 || echo $atmpath )
+                        lndpath=$( [ "x$lndpath" = "x" ] && echo $lndpath0 || echo $lndpath )
                      else
                         caseidpath=`readlink -f $2`
+                        caseidpath=$( [ "x$caseidpath" = "x" ] && echo $2 || echo $caseidpath )
                         atmpath=$caseidpath 
                         lndpath=$caseidpath
                      fi 
              	echo -e "The directory of the input LND results: ${CR_GRN}$lndpath${CR_NUL}"
              	echo -e "The directory of the input ATM results: ${CR_GRN}$atmpath${CR_NUL}"; shift 2 ;;
              -o|--outputpath)
-                     outputpath=`readlink -f $2`
+                     outpath=$2
+                     outputpath=`readlink -f $outpath`
+                     outputpath=$( [ "x$outputpath" = "x" ] && echo $outpath || echo $outputpath )
      		echo -e "The output directory: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              -e|--experiment)
                      experiment=$2
@@ -362,8 +368,8 @@ cd $outputpath/$caseid
 
 # improve it using JSON in future
 if [[ $ilamb_fields == 1 ]]; then 
-   temp_amon=$(<"$SrcDir/Amon_ilamb.txt")
-   temp_lmon=$(<"$SrcDir/Lmon_ilamb.txt")
+   temp_amon=$(<"$SrcDir/template/Amon_ilamb.txt")
+   temp_lmon=$(<"$SrcDir/template/Lmon_ilamb.txt")
 
    # remove duplicates
    fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
@@ -374,26 +380,35 @@ if [[ $ilamb_fields == 1 ]]; then
    fldlist_annual=( )
 else
    if [[ $prep_cmor_data == 1 ]]; then
-       temp_amon=$(<"$SrcDir/Amon_cmor.txt")
-       temp_lmon=$(<"$SrcDir/Lmon_cmor.txt")
+
+       if [[ -f "$SrcDir/template/Amon_cmor.txt" ]]; then
+          temp_amon=$(<"$SrcDir/template/Amon_cmor.txt")
+       else
+	  temp_amon=()
+       fi
+       if [[ -f "$SrcDir/template/Lmon_cmor.txt" ]]; then
+          temp_lmon=$(<"$SrcDir/template/Lmon_cmor.txt")
+       else
+          temp_lmon=()
+       fi
 
        # remove duplicates
        fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
        fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
        fldlist_annual=( )
    else
-       if [[ -f "$SrcDir/Amon_user.txt" ]]; then
-          temp_amon=$(<"$SrcDir/Amon_user.txt")
+       if [[ -f "$SrcDir/template/Amon_user.txt" ]]; then
+          temp_amon=$(<"$SrcDir/template/Amon_user.txt")
        else
 	  temp_amon=()
        fi
-       if [[ -f "$SrcDir/Lmon_user.txt" ]]; then
-          temp_lmon=$(<"$SrcDir/Lmon_user.txt")
+       if [[ -f "$SrcDir/template/Lmon_user.txt" ]]; then
+          temp_lmon=$(<"$SrcDir/template/Lmon_user.txt")
        else
 	  temp_lmon=()
        fi
-       if [[ -f "$SrcDir/Omon_user.txt" ]]; then
-          temp_omon=$(<"$SrcDir/Omon_user.txt")
+       if [[ -f "$SrcDir/template/Omon_user.txt" ]]; then
+          temp_omon=$(<"$SrcDir/template/Omon_user.txt")
        else
 	  temp_omon=()
        fi
