@@ -21,11 +21,12 @@ cleanup() {
 
 trap cleanup ERR
 
+
+# copy from nco user's guide
 function nctypget { ncks --trd -m -v ${1} ${2} | grep -E -i "^${1}: type" | cut -f 3 -d ' ' | cut -f 1 -d ',' ; }
 
 
 # defaults:
-
 ilamb_fields=0        # define varaible list for ILAMB
 convert_to_cmip=0     # 0 - not cmorize outputs; 1 - cmorize outputs 
 nconcurrent=0         # number of concurrent processes to run time serialzation, 0: equal to the number of total vairables, > 0 use it
@@ -41,6 +42,9 @@ skip_genmap=0
 skip_rename=0
 no_gen_ts=0
 high_freq_data=0
+
+lnd="elm"
+atm="eam"
 
 mydebug=0
 
@@ -58,14 +62,12 @@ FTNORM='\033[0m'
 # print usage
 print_usage () {
 
-
    CmdNam=`basename $0`
-
    echo -e ""
    echo -e ""
    echo -e "\e[1mUsage:\e[0m \e[32m$CmdNam\e[0m --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
-                  --experiment[-e] --model[-m] --numcc --numcc-remap [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
-                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor --hfs"
+                  --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
+                  --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor --hfs --oldname"
 
    echo -e ""
    echo -e ""
@@ -95,6 +97,7 @@ print_usage () {
    echo -e "         \e[1m--addfxflds            \e[0m: switch to rewrite the two fixed datasets 'sftlf' and 'areacella' and exit. Default they won't be written out"
    echo -e "         \e[1m--prepcmor             \e[0m: switch to do time serializatons for preparing the data for cmorization"
    echo -e "         \e[1m--hfs                  \e[0m: switch for high frequency data (daily, hourly)"
+   echo -e "         \e[1m--hfs                  \e[0m: switch to the old names in the histroy files, i.e. cam and clm2 instead of eam and elm"
 
    echo -e ""
    echo -e ""
@@ -192,6 +195,8 @@ parse_options () {
                      prep_cmor_data=1;  shift ;;
              --hfs)
                      high_freq_data=1;  shift ;;
+             --oldname)
+                     lnd="clm2"; atm="cam";  shift ;;
              --ncclimo)
                      use_ncclimo=1;     shift ;;
              --pyreshaper)
@@ -434,8 +439,6 @@ else
    fi
 fi
 
-echo 'xxxdeb', $fldlist_omon
-
 
 if [[ ! -z $more_vars ]]; then
    fldlist_monthly="${more_vars} ${fldlist_monthly}"
@@ -447,7 +450,7 @@ if [[ $prep_cmor_data == 1 && $use_softlnk == 1 ]]; then
    firstyr=`printf "%04d" $((stryear+year_align))`
    last_yr=`printf "%04d" $((endyear+year_align))`
    mkdir -p ${drc_out}/fx
-   ncks -O -v area,landfrac,ZBOT ${drc_inp}/*.clm2.h0.${firstyr}-01.nc ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
+   ncks -O -v area,landfrac,ZBOT ${drc_inp}/*.${lnd}.h0.${firstyr}-01.nc ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
    ncrename -v landfrac,LANDFRAC ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
    exit
 fi
@@ -473,7 +476,7 @@ if [[ $add_fixed_flds == 1 ]]; then
 
    which ncl
    
-   ncks -O -v area,landfrac,TSA ${lndpath}/*.clm2.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
+   ncks -O -v area,landfrac,TSA ${lndpath}/*.${lnd}.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
    if [[ $use_softlnk == 1 ]]; then
       ln -sf ${drc_tmp}/area.nc ${drc_rgr}/area.nc
 
@@ -592,7 +595,7 @@ if [[ $no_gen_ts == 0 ]]; then
    if [ ! -z "$fldlist_lmon" ]; then 
       drc_out=${drc_out}/lnd
       fldlist_monthly=$fldlist_lmon
-      comp="clm2"
+      comp="${lnd}"
       if [[ $use_ncclimo == 1 ]]; then
          source $SrcDir/tool/run_gen_ts.bash
       else
@@ -603,7 +606,7 @@ if [[ $no_gen_ts == 0 ]]; then
    if [ ! -z "$fldlist_amon" ]; then 
       drc_out=${drc_out}/atm
       fldlist_monthly=$fldlist_amon
-      comp="cam"
+      comp="${atm}"
       if [[ $use_ncclimo == 1 ]]; then
          source $SrcDir/tool/run_gen_ts.bash
       else
