@@ -4,7 +4,9 @@
 export HDF5_USE_FILE_LOCKING=FALSE
 
 CaseNames=(\
-           20240903_TRENDY_f09_S0)
+           20240903_TRENDY_f09_S0 \
+           20240903_TRENDY_f09_S1 \
+           20240903_TRENDY_f09_S2)
 
            #20230830_S1_f09_f09_ICB20TRCNPRDCTCBC \
            #20230830_S2_f09_f09_ICB20TRCNPRDCTCBC \
@@ -22,7 +24,7 @@ for cname in "${CaseNames[@]}"; do
     echo x${cname}x
     echo $OutDir/$cname/run/
     $SrcDir/../elm_singlevar_ts.bash -c $cname -y 1700-2023 -a 0 -i $OutDir/$cname/run/ -o $CmrDir \
-               -e TRENDY2024 -m e3sm --ncclimo --prepcmor 
+               -e TRENDY2024 -m e3sm --ncclimo --prepcmor --tabname lmon
 done
 
 # get fix data
