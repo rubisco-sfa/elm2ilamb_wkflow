@@ -18,20 +18,26 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-drc_rgr=/global/cscratch1/sd/minxu/ILAMB_WCYCLE_20190319/hires_prc/theta.20180906.branch_noCNT.A_WCYCL1950S_CMIP6_HR/rgr/
 #-skip_genmap=651
 
+module unload ncl
 
-if [[ *"cori"* == "$HOST" ]]; then
-   module load ncl/6.4.0  # for esmf regridded
-else
-   module load ncl  # for esmf regridded
-fi
+#-if [[ *"cori"* == "$HOST" ]]; then
+#-   module load ncl/6.4.0  # for esmf regridded
+#-else
+#-   module load ncl  # for esmf regridded
+#-fi
 
-module load nco
+module load ncl/6.4.0
+
+module list
+
+#module load nco
 
 # ncdmnsz $dmn_nm $fl_nm : What is dimension size?
 function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 7 -d ' ' | uniq ; }
 
 export NCO_PATH_OVERRIDE='No'
 
+module load ncl/6.4.0
 cd ${drc_out}
 
 
@@ -119,9 +125,15 @@ done
 echo -e "No. of large file to remap: ${CR_GRN}${#largefiles[@]}${CR_NUL}"
 echo -e "No. of small file to remap: ${CR_GRN}${#smallfiles[@]}${CR_NUL}"
 
-numcc_remap=3
 
-echo -e "${FTBOLD}Attn: default no. of threads to be used in remapping is 3, it can be changed in run_ncremap.sh${FTNORM}"
+if [ -z ${numcc_remap+x} ]; then
+   numcc_remap=3
+   echo -e "${FTBOLD}Attn: default no. of threads to be used in remapping is 3, it can be changed in run_ncremap.sh${FTNORM}"
+fi
+
+
+echo -e "No of threads to be used in remapping is $numcc_remap"
+
 
 if [[ ${#smallfiles[@]} -lt $numcc_remap ]]; then
    numcc_remap=${#smallfiles[@]}
