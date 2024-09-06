@@ -46,6 +46,8 @@ high_freq_data=0
 lnd="elm"
 atm="eam"
 
+tab_name='lmon'
+
 mydebug=0
 
 Script=`readlink -f $0`
@@ -379,13 +381,13 @@ fldlist_omon=''
 
 if [[ $ilamb_fields == 1 ]]; then 
    if [[ (${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Amon_ilamb.txt" ]]; then
-       temp_amon=$(cat "$SrcDir/Amon_ilamb.txt"|grep -v "#")
+       temp_amon=$(cat "$SrcDir/template/Amon_ilamb.txt"|grep -v "#")
        fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
    else
        fldlist_amon=''
    fi
    if [[ (${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Lmon_ilamb.txt" ]]; then
-       temp_lmon=$(cat "$SrcDir/Lmon_ilamb.txt"|grep -v "#")
+       temp_lmon=$(cat "$SrcDir/template/Lmon_ilamb.txt"|grep -v "#")
        fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
    else
        fldlist_lmon=''
@@ -394,23 +396,23 @@ if [[ $ilamb_fields == 1 ]]; then
 else
    if [[ $prep_cmor_data == 1 ]]; then
        if [[ (${tab_name,,} == 'amon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Amon_cmor.txt" ]]; then
-           temp_amon=$(cat "$SrcDir/Amon_cmor.txt" |grep -v "#")
+           temp_amon=$(cat "$SrcDir/template/Amon_cmor.txt" |grep -v "#")
            fldlist_amon=`echo $temp_amon | tr ' ' '\n' | sort -u | xargs`
        else
            fldlist_amon=''
        fi
        if [[ (${tab_name,,} == 'lmon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Lmon_cmor.txt" ]]; then
-           temp_lmon=$(cat "$SrcDir/Lmon_cmor.txt" |grep -v "#")
+           temp_lmon=$(cat "$SrcDir/template/Lmon_cmor.txt" |grep -v "#")
            fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
        else
            fldlist_lmon=''
        fi
 
        if [[ (${tab_name,,} == 'omon' ||  ${tab_name,,} == 'all') && -f "$SrcDir/template/Omon_cmor.txt" ]]; then
-           temp_lmon=$(cat "$SrcDir/Omon_cmor.txt" |grep -v "#")
-           fldlist_lmon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
+           temp_omon=$(cat "$SrcDir/template/Omon_cmor.txt" |grep -v "#")
+           fldlist_omon=`echo $temp_lmon | tr ' ' '\n' | sort -u | xargs`
        else
-           fldlist_lmon=''
+           fldlist_omon=''
        fi
 
        fldlist_annual=( )
@@ -608,6 +610,7 @@ if [[ $no_gen_ts == 0 ]]; then
       drc_out=${drc_out}/lnd
       fldlist_monthly=$fldlist_lmon
       comp="${lnd}"
+
       if [[ $use_ncclimo == 1 ]]; then
          source $SrcDir/tool/run_gen_ts.bash
       else
