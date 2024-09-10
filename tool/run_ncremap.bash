@@ -18,7 +18,7 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 #-drc_rgr=/global/cscratch1/sd/minxu/ILAMB_WCYCLE_20190319/hires_prc/theta.20180906.branch_noCNT.A_WCYCL1950S_CMIP6_HR/rgr/
 #-skip_genmap=651
 
-module unload ncl
+#module unload ncl
 
 #-if [[ *"cori"* == "$HOST" ]]; then
 #-   module load ncl/6.4.0  # for esmf regridded
@@ -26,9 +26,9 @@ module unload ncl
 #-   module load ncl  # for esmf regridded
 #-fi
 
-module load ncl/6.4.0
+#module load ncl/6.4.0
 
-module list
+#module list
 
 #module load nco
 
@@ -37,7 +37,10 @@ function ncdmnsz { ncks --trd -m -M ${2} | grep -E -i ": ${1}, size =" | cut -f 
 
 export NCO_PATH_OVERRIDE='No'
 
-module load ncl/6.4.0
+#module load ncl/6.4.0
+
+echo "Please make sure ESMF_RegridWeightGen is in the searchable path"
+
 cd ${drc_out}
 
 
@@ -46,7 +49,6 @@ if [[ $mydebug == 1 ]]; then
   echo $drc_map
 fi
 
-which ncl
 
 bgn_year=$stryear
 end_year=$endyear
@@ -65,7 +67,6 @@ fi
 
 echo "Begin remapping ..."
 which ESMF_RegridWeightGen
-which ncl
 
 firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
@@ -82,15 +83,15 @@ if [[ x$xskip_genmap == "x0" ]]; then
 
     if [[ $comp == "lnd" ]]; then
        echo "$myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
-                            ${drc_inp}/*.clm2.h0.${firstyr}-01.nc" 
+                            ${drc_inp}/*.${lnd}.${histfilenum}.${firstyr}-01*.nc" 
        $myncremap -a aave -P sgs -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
-                            ${drc_inp}/*.clm2.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
+                            ${drc_inp}/*.${lnd}.${histfilenum}.${firstyr}-01*.nc > ${drc_log}/ncremap.lnd 2>&1
 
     else
        echo "$myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
-                            ${drc_inp}/*.cam.h0.${firstyr}-01.nc"
+                            ${drc_inp}/*.${atm}.${histfilenum}.${firstyr}-01*.nc"
        $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_${comp}_${BASHPID}.nc --drc_out=${drc_tmp} \
-                            ${drc_inp}/*.cam.h0.${firstyr}-01.nc > ${drc_log}/ncremap.lnd 2>&1
+                            ${drc_inp}/*.${atm}.${histfilenum}.${firstyr}-01*.nc > ${drc_log}/ncremap.lnd 2>&1
     fi
     if [[ $? != 0 ]]; then
        echo "Failed in the ncreamp, please check out ${drc_log}/ncremap.lnd"

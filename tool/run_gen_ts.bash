@@ -40,7 +40,7 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 bgn_year=$((10#$stryear))
 end_year=$((10#$endyear))
 
-use_mynco=1
+use_mynco=2
 
 if [[ $use_mynco == 1 ]]; then
    myncclimo=$SrcDir/tool/ncclimo
@@ -77,10 +77,10 @@ for iy in `seq $((bgn_year+year_align)) $((end_year+year_align))`; do
 	if [[ $comp == "mpaso" ]]; then
 	   ncfiles="$ncfiles "`/bin/ls mpaso.hist.am.timeSeriesStatsMonthly.${cy}*.nc`
 	else
-           ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*.nc`
+           ncfiles="$ncfiles "`/bin/ls *${comp}.${histfilenum}.${cy}*.nc`
 	fi
     else
-        ncfiles="$ncfiles "`/bin/ls *${comp}.h0.${cy}*00000.nc`
+        ncfiles="$ncfiles "`/bin/ls *${comp}.${histfilenum}.${cy}*00000.nc`
     fi
 
    
@@ -97,18 +97,18 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 if [[ $nconcurrent == 0 ]]; then
    if [[ $high_freq_data == 0 ]]; then
-      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$((bgn_year+year_align)) --yr_end=$((end_year+year_align)) --ypf=500 \
            ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.$comp 2>&1
    else
-      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 --clm_md='hfs'\
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nvrs --yr_srt=$((bgn_year+year_align)) --yr_end=$((end_year+year_align)) --ypf=500 --clm_md='hfs'\
            ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.$comp 2>&1
    fi
 else
    if [[ $high_freq_data == 0 ]]; then
-      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 \
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$((bgn_year+year_align)) --yr_end=$((end_year+year_align)) --ypf=500 \
            ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.$comp 2>&1
    else
-      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$bgn_year --yr_end=$end_year --ypf=500 --clm_md='hfs'\
+      time /bin/ls $ncfiles | $myncclimo --var=${vars} --job_nbr=$nconcurrent --yr_srt=$((bgn_year+year_align)) --yr_end=$((end_year+year_align)) --ypf=500 --clm_md='hfs'\
            ${cmip6_opt} --drc_out=${drc_out} > ${drc_log}/ncclimo.$comp 2>&1
    fi
 fi

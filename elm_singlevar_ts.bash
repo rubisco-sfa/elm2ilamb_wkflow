@@ -43,6 +43,8 @@ skip_rename=0
 no_gen_ts=0
 high_freq_data=0
 
+histfilenum="h0"
+
 lnd="elm"
 atm="eam"
 
@@ -69,7 +71,7 @@ print_usage () {
    echo -e ""
    echo -e ""
    echo -e "\e[1mUsage:\e[0m \e[32m$CmdNam\e[0m --caseid[-c] --year_range[-y] --align_year[-a] --caseidpath[-i] --outputpath[-o] 
-                  --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] -v --no-gents
+                  --experiment[-e] --model[-m] --numcc [--cmip] [--ilamb] [--addfxflds] --srcgrid[-s] --dstgrid[-g] --hisfile -v --no-gents
                   --skip-genmap --ncclimo|--pyreshaper --ncremap|--cremap3|--linkfil --prepcmor --hfs --oldname"
 
    echo -e ""
@@ -89,6 +91,7 @@ print_usage () {
    echo -e "         \e[1m--skip-genmap          \e[0m: 0 means not to skip map generation, positive integer number is to skip it and use mapXXXX.nc instead"
    echo -e "         \e[1m--srcgrid, -s          \e[0m: if do remapping, source grid description in the SCRIP format is required"
    echo -e "         \e[1m--dstgrid, -g          \e[0m: if do remapping, target grid description in the SCRIP format is required"
+   echo -e "         \e[1m--histfile, -h         \e[0m: history file number from model outputs (i.e. h0 or h1, h2 ..etc)"
    echo -e "         \e[1m--numcc                \e[0m: number of concurrent processes to do time serialzation. if 0 or not set use the total number of variables"
    echo -e "         \e[1m--no-gen-ts            \e[0m: switch of not generating time serialization (i.e. the ts files were generated before)"
    echo -e "         \e[1m--ncclimo|pyreshaper   \e[0m: switch of time serialization methods either using ncclimo or PyReshaper"
@@ -109,8 +112,8 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,oldname,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,numcc-remap:,srcgrid:,dstgrid:,morevar:,tabname:
-     shrtargs=hvc:T:y:a:i:o:e:m:s:g:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,oldname,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,numcc:,numcc-remap:,srcgrid:,dstgrid:,morevar:,tabname:,histfile:
+     shrtargs=hvc:T:y:a:i:o:e:m:s:g:h:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
      if [[ $? != 0 ]]; then 
@@ -174,6 +177,9 @@ parse_options () {
              -e|--experiment)
                      experiment=$2
      		echo -e "The experiment name: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
+             -h|--histfile)
+                     histfilenum=$2
+     		echo -e "The histry file number: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
              -m|--model)
                      model=$2
      		echo -e "The model name: ${CR_GRN}$2${CR_NUL}"; shift 2 ;;
@@ -409,6 +415,8 @@ else
    Vcol='user'
 fi
 
+
+#echo 'xxx', $Vol, $
 
 if [[ ${tab_name,,} =~ ^a && -f "$SrcDir/template/${Atab}_${Vcol}.txt" ]]; then
     temp_amon=$(cat "$SrcDir/template/${Atab}_${Vcol}.txt"|grep -v "#")
