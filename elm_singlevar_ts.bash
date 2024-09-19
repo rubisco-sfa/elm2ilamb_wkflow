@@ -488,9 +488,8 @@ if [[ $add_fixed_flds == 1 ]]; then
    
    echo "do mapping"
 
-   which ncl
-   
-   ncks -O -v area,landfrac,TSA ${lndpath}/*.${lnd}.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
+   # elm/clm files
+   ncks -O -v area,landfrac,TSA,ZBOT,PCT_LANDUNIT,PCT_NAT_PFT ${lndpath}/*.${lnd}.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
    if [[ $use_softlnk == 1 ]]; then
       ln -sf ${drc_tmp}/area.nc ${drc_rgr}/area.nc
 
@@ -507,10 +506,14 @@ if [[ $add_fixed_flds == 1 ]]; then
 
    ncks -v area ${drc_rgr}/area.nc  ${drc_rgr}/areacella.nc
    ncks -v landfrac ${drc_rgr}/area.nc  ${drc_rgr}/sftlf.nc
+   ncks -v ZBOT ${drc_rgr}/area.nc ${drc_rgr}/zbot.nc
+   ncks -v PCT_LANDUNIT -F -d ltype,3 ${drc_rgr}/area.nc ${drc_rgr}/landice_fraction.nc
+   ncks -v PCT_NAT_PFT ${drc_rgr}/area.nc ${drc_rgr}/pct_nat_pft.nc
 
    #remove global attribute
    ncatted -h -a ,global,d,, ${drc_rgr}/areacella.nc
-   ncatted -h -a ,global,d,,     ${drc_rgr}/sftlf.nc
+   ncatted -h -a ,global,d,, ${drc_rgr}/sftlf.nc
+   ncatted -h -a ,global,d,, ${drc_rgr}/landice_fraction.nc
 
    #area
    if [[ $use_softlnk == 1 ]]; then
@@ -541,6 +544,7 @@ if [[ $add_fixed_flds == 1 ]]; then
 
    /bin/rm -f  ${drc_rgr}/areacella.nc
 
+   # sftlf
    ncap2 -O -h -4 -v -s 'sftlf=landfrac*100;' ${drc_rgr}/sftlf.nc ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
    ncatted -h -a standard_name,sftlf,o,c,'Land Area Fraction' ${drc_fix}/sftlf"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
 
@@ -561,6 +565,15 @@ if [[ $add_fixed_flds == 1 ]]; then
    /bin/rm -f  ${drc_rgr}/sftlf.nc 
    /bin/rm -f  ${drc_rgr}/area.nc 
 
+   # landice fraction
+   ncwa -O -h -a time  ${drc_rgr}/landice_fraction.nc ${drc_rgr}/test.nc
+   ncwa -O -h -a ltype ${drc_rgr}/test.nc ${drc_rgr}/test.nc
+   ncks -O -C -x -v area,time,time_bounds ${drc_rgr}/test.nc ${drc_fix}/sftgif"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncrename -h -v PCT_LANDUNIT,sftgif  ${drc_fix}/sftgif"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+   ncatted -h -a standard_name,sftgif,o,c,'Land Ice Area Percentage' ${drc_fix}/sftgif"_fx_"${model}"_"${experiment}"_r0i0p0.nc"
+
+
+   # ocean frac
    ncks -O -v OCNFRAC ${atmpath}/*.cam.h0.${firstyr}-01.nc ${drc_tmp}/ocnfrac.nc 
    $myncremap -a aave -s $src_grd -g $dst_grd -m ${drc_map}/map_atm_${BASHPID}.nc --drc_out=${drc_rgr} \
                              ${drc_tmp}/ocnfrac.nc > ${drc_log}/ncremap.lnd 2>&1
