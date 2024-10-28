@@ -44,15 +44,20 @@ echo "Please make sure ESMF_RegridWeightGen is in the searchable path"
 cd ${drc_out}
 
 
+
 if [[ $mydebug == 1 ]]; then
   echo $DATA
   echo $drc_map
 fi
 
 
-bgn_year=$stryear
-end_year=$endyear
+#force to decimal
+bgn_year=$((10#$stryear))
+end_year=$((10#$endyear))
 alg_year=$year_align
+
+cystrt=`printf "%04d" $((bgn_year+year_align))`
+cystop=`printf "%04d" $((end_year+year_align))`
 
 # get from run_gen_ts including drc_inp, drc_out, drc_tmp and drc_map
 
@@ -73,9 +78,12 @@ firstyr=`printf "%04d" $((bgn_year+alg_year))`
 
 xskip_genmap=$skip_genmap
 
-if [[ $cmp == "atm" ]]; then
-   xskip_genmap= 0
-fi
+
+# why reset skip_genmap for atm?
+# mxu comment out Oct.16, 2024
+#if [[ $cmp == "atm" ]]; then
+#   xskip_genmap= 0
+#fi
 
 
 if [[ x$xskip_genmap == "x0" ]]; then
@@ -113,8 +121,9 @@ varlist=(${fldlist_monthly})
 
 for lvr in "${varlist[@]}"; do
     #-echo $lvr
-    smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}_??????_??????.nc" -type f -size -1000000k -follow`)
-    largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}_??????_??????.nc" -type f -size +1000000k -follow`)
+
+    smallfiles+=(`cd ${drc_out} && find ./ -name "${lvr}_${cystrt}??_${cystop}??.nc" -type f -size -1000000k -follow`)
+    largefiles+=(`cd ${drc_out} && find ./ -name "${lvr}_${cystrt}??_${cystop}??.nc" -type f -size +1000000k -follow`)
 done
 
 
@@ -134,6 +143,13 @@ fi
 
 
 echo -e "No of threads to be used in remapping is $numcc_remap"
+
+echo ${largefiles}
+echo ${smallfiles}
+
+echo "-----------------------------------"
+
+
 
 
 if [[ ${#smallfiles[@]} -lt $numcc_remap ]]; then
