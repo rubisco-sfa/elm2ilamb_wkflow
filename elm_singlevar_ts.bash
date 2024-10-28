@@ -275,7 +275,7 @@ parse_options () {
      fi
      
      if [[ ($skip_remap == 0 || $add_fixed_flds == 1) && (-z ${src_grd+x} || -z ${dst_grd+x}) ]]; then
-         if [[ $use_softlnk == 1 ]]; then
+         if [[ $use_softlnk == 1 || $skip_genmap > 0 ]]; then
             echo -e "${CR_GRN} no remapping needed"
 
          else
@@ -405,7 +405,7 @@ fldlist_lmon=''
 fldlist_omon=''
 
 
-if [[ ${tab_name,,} == 'all' && high_freq_data == 1 ]]; then
+if [[ ${tab_name,,} == 'all' && $high_freq_data == 1 ]]; then
    Atab='Aday'
    Ltab='Lday'
    Otab='Oday'
@@ -432,7 +432,6 @@ else
 fi
 
 
-#echo 'xxx', $Vol, $
 
 if [[ ${tab_name,,} =~ ^a && -f "$SrcDir/template/${Atab}_${Vcol}.txt" ]]; then
     temp_amon=$(cat "$SrcDir/template/${Atab}_${Vcol}.txt"|grep -v "#")
@@ -476,13 +475,14 @@ if [[ ! -z $more_vars ]]; then
 fi
 
 
+echo $fldlist_lmon, yyy
+
 if [[ $prep_cmor_data == 1 && $use_softlnk == 1 ]]; then
    firstyr=`printf "%04d" $((stryear+year_align))`
    last_yr=`printf "%04d" $((endyear+year_align))`
    mkdir -p ${drc_out}/fx
    ncks -O -v area,landfrac,ZBOT ${drc_inp}/*.${lnd}.h0.${firstyr}-01.nc ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
    ncrename -v landfrac,LANDFRAC ${drc_out}/fx/atm_area_landfrac_${firstyr}01_${last_yr}12.nc
-   exit
 fi
 
 #exit 'xxx'
