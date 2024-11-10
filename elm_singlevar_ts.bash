@@ -116,7 +116,7 @@ print_usage () {
 
 # command line arguments:
 parse_options () {
-     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,oldname,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,ensemble:numcc:,numcc-remap:,srcgrid:,dstgrid:,morevar:,tabname:,histfile:
+     longargs=ilamb,cmip,addfxflds,prepcmor,hfs,oldname,ncclimo,pyreshaper,ncremap,cremap3,linkfil,no-gen-ts,skip-rename,skip-genmap:,caseid:,year_range:,year_align:,caseidpath:,outputpath:,experiment:,model:,ensemble:,numcc:,numcc-remap:,srcgrid:,dstgrid:,morevar:,tabname:,histfile:
      shrtargs=hvc:T:y:a:i:o:e:m:s:g:h:
      CmdLine=`getopt -s bash  -o  $shrtargs --long $longargs -- "$@"`
      
