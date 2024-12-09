@@ -40,7 +40,7 @@ cmip6_opt='-7 --dfl_lvl=1 --no_cll_msr --no_frm_trm --no_stg_grd' # CMIP6-specif
 bgn_year=$((10#$stryear))
 end_year=$((10#$endyear))
 
-use_mynco=2
+use_mynco=1
 
 if [[ $use_mynco == 1 ]]; then
    myncclimo=$SrcDir/tool/ncclimo
