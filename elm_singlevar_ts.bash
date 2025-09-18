@@ -486,7 +486,7 @@ if [[ $add_fixed_flds == 1 ]]; then
 
    firstyr=`printf "%04d" $((stryear+year_align))`
    
-   echo "do mapping"
+   echo "do mapping ${firstyr}"
 
    # elm/clm files
    ncks -O -v area,landfrac,TSA,ZBOT,PCT_LANDUNIT,PCT_NAT_PFT ${lndpath}/*.${lnd}.h0.${firstyr}-01.nc ${drc_tmp}/area.nc 
