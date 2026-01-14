@@ -520,6 +520,8 @@ if [[ $add_fixed_flds == 1 ]]; then
       skip_genmap=$mapid
    fi
 
+   echo 'xxxxxx'
+
    ncks -v area ${drc_rgr}/area.nc  ${drc_rgr}/areacella.nc
    ncks -v landfrac ${drc_rgr}/area.nc  ${drc_rgr}/sftlf.nc
    ncks -v ZBOT ${drc_rgr}/area.nc ${drc_rgr}/zbot.nc
@@ -637,6 +639,7 @@ done
 if [[ $no_gen_ts == 0 ]]; then
    if [ ! -z "$fldlist_lmon" ]; then 
       drc_out=${drc_out}/lnd_${ensno}
+
       fldlist_monthly=$fldlist_lmon
       comp="${lnd}"
 
@@ -677,8 +680,8 @@ if [[ $skip_remap == 0 ]]; then
 
       #land 
       if [ ! -z "$fldlist_lmon" ]; then 
-         drc_out=${DATA}/org/lnd
-         drc_rgr=${DATA}/rgr/lnd
+         drc_out=${DATA}/org/lnd_${ensno}
+         drc_rgr=${DATA}/rgr/lnd_${ensno}
          fldlist_monthly=$fldlist_lmon
 
          if [[ $fldlist_lmon == $caseid ]]; then
@@ -694,8 +697,8 @@ if [[ $skip_remap == 0 ]]; then
 
       #atmos
       if [ ! -z "$fldlist_amon" ]; then 
-         drc_out=${DATA}/org/atm
-         drc_rgr=${DATA}/rgr/atm
+         drc_out=${DATA}/org/atm_${ensno}
+         drc_rgr=${DATA}/rgr/atm_${ensno}
          fldlist_monthly=$fldlist_amon
          comp="atm"
 
